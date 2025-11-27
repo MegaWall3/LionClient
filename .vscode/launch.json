@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Tauri: pnpm tauri dev",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "pnpm tauri dev",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
+
+

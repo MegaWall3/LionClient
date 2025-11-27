@@ -1,72 +1,17 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Dependencies
-node_modules
-.pnp
-.pnp.js
-
-# Build outputs
-dist
-dist-ssr
-build
-*.local
-
-# Compiled binaries
-*.exe
-*.dll
-*.so
-*.dylib
-*.pdb
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# OS files
+# 文件系统
+desktop.ini
 Thumbs.db
 .DS_Store
-*.swp
-*.swo
-*~
 
-# Backup files
-*.backup
-*.bak
-*.old
-*.tmp
-*.refactored
-*.orig
+# 依赖文件
+node_modules/
+pnpm-lock.yaml
 
-# Environment variables
+# 日志文件
+*.log
+
+# 环境变量
 .env
-.env.local
-.env.*.local
 
-# Tauri
-src-tauri/target/
-src-tauri/gen/
-
-# Testing
-coverage
-.nyc_output
-
-# Misc
-.cache
-.temp
-*.pid
-*.seed
-*.pid.lock
+# 编译产物
+*.exe
