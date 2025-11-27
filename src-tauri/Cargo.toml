@@ -26,4 +26,8 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"] }
 tokio-util = { version = "0.7", features = ["codec"] }
 futures-util = "0.3"
 walkdir = "2.5"
+trash = "5.0"
+scraper = "0.20"
+regex = "1.11"
+percent-encoding = "2.3"
 

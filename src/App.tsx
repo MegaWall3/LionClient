@@ -1,104 +1,81 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   Activity,
   ArrowUpRight,
-  Bot,
   Download,
   FolderSearch2,
   MessageSquare,
-  Minus,
   Plus,
-  Send,
   Settings2,
   ShieldCheck,
-  Square,
   Sparkles,
   TerminalSquare,
   TimerReset,
-  X,
 } from "lucide-react";
-import { twMerge } from "tailwind-merge";
+import type { ChatMessage, ToolTrace, FileEntry } from "./types";
+import { cn, formatSize, formatTime, formatTimestamp } from "./utils";
+import { useWindowControls, useAutoScroll } from "./hooks";
+import { WindowControls, ChatContainer, ChatInput } from "./components";
 
-type ChatRole = "user" | "assistant" | "tool";
+function normalizeToolArgumentString(raw: string): string {
+  return raw
+    .replace(/^```json/i, "")
+    .replace(/^```/, "")
+    .replace(/```$/, "")
+    .trim();
+}
 
-type ChatMessage = {
-  id: string;
-  role: ChatRole;
-  content: string;
-  tool?: string;
-  timestamp: string;
-  status?: "pending" | "success" | "error";
-};
+function parseToolArguments(raw: string): Record<string, any> {
+  let current = normalizeToolArgumentString(raw);
 
-type ToolTrace = {
-  id: string;
-  label: string;
-  status: "queued" | "running" | "done" | "error";
-  detail: string;
-  startedAt: string;
-};
+  for (let depth = 0; depth < 5; depth += 1) {
+    try {
+      const parsed = JSON.parse(current);
+      if (typeof parsed === "string") {
+        current = normalizeToolArgumentString(parsed);
+        continue;
+      }
 
-type FileEntry = {
-  path: string;
-  file_type: string;
-  size?: number | null;
-  modified_ms?: number | null;
-};
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as Record<string, any>;
+      }
 
-const appWindow = getCurrentWindow();
+      throw new Error("工具参数必须是对象");
+    } catch (error) {
+      throw new Error(
+        `工具参数解析失败: ${(error as Error).message ?? "格式不正确"}`
+      );
+    }
+  }
 
+  throw new Error("工具参数解析失败: 嵌套层级过深");
+}
+
+function getToolArgumentsPreview(
+  raw: string
+): Record<string, any> | string {
+  try {
+    return parseToolArguments(raw);
+  } catch {
+    return normalizeToolArgumentString(raw);
+  }
+}
+
+// 初始消息：只包含一条欢迎消息
 const initialMessages: ChatMessage[] = [
   {
     id: "m1",
     role: "assistant",
     content:
-      "欢迎回来，我已经加载完系统上下文。需要我搜索某个项目、清理磁盘，还是去执行你的自动化脚本？",
-    timestamp: "09:41",
-  },
-  {
-    id: "m2",
-    role: "user",
-    content:
-      "帮我看看 D 盘 workspace 目录里有哪些最近修改的 TypeScript 文件，顺便准备一个重命名脚本。",
-    timestamp: "09:42",
-  },
-  {
-    id: "m3",
-    role: "tool",
-    tool: "list_files",
-    content:
-      "匹配到 18 个 ts/tsx 文件，其中 5 个在 24 小时内改动，详情已推送到时间线。",
-    timestamp: "09:42",
-    status: "success",
+      "你好！我是 ELF，你的桌面智能代理助手。我可以帮你完成各种电脑任务，比如搜索文件、管理文件、执行命令等。有什么需要帮助的吗？",
+    timestamp: formatTimestamp(),
   },
 ];
 
-const initialTrace: ToolTrace[] = [
-  {
-    id: "t1",
-    label: "扫描 workspace 目录",
-    status: "done",
-    detail: "list_files · 18 results, filtered by *.ts*",
-    startedAt: "09:42",
-  },
-  {
-    id: "t2",
-    label: "生成重命名计划",
-    status: "running",
-    detail: "call_llm · reasoning in progress",
-    startedAt: "09:43",
-  },
-  {
-    id: "t3",
-    label: "等待确认操作",
-    status: "queued",
-    detail: "sandbox preview ready",
-    startedAt: "···",
-  },
-];
+// 初始工具轨迹：空数组，不显示预置数据
+const initialTrace: ToolTrace[] = [];
 
 const quickActions = [
   "扫描 Downloads 并按大小排序",
@@ -120,18 +97,14 @@ const statusBadges: Record<ToolTrace["status"], string> = {
   error: "bg-rose-500/10 text-rose-400",
 };
 
-function cn(...classes: (string | undefined | false)[]) {
-  return twMerge(classes.filter(Boolean).join(" "));
-}
-
 function App() {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [toolTrace] = useState<ToolTrace[]>(initialTrace);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
-  const [isMaximized, setIsMaximized] = useState(false);
+  const [activeUnlisteners, setActiveUnlisteners] = useState<Map<string, UnlistenFn[]>>(new Map());
+  const { isMaximized, minimize, maximizeToggle, close } = useWindowControls();
+  const messagesEndRef = useAutoScroll(messages, isThinking);
   const [listPath, setListPath] = useState("D:\\\\Workspace");
   const [listPattern, setListPattern] = useState("");
   const [listRecursive, setListRecursive] = useState(false);
@@ -150,16 +123,49 @@ function App() {
     [messages],
   );
 
+  // 停止当前流式输出
+  function handleStop() {
+    // 清理所有活动的监听器
+    activeUnlisteners.forEach((unlisteners) => {
+      unlisteners.forEach((unlisten) => unlisten());
+    });
+    setActiveUnlisteners(new Map());
+    setIsThinking(false);
+    
+    // 更新最后一条 assistant 消息，标记为已停止
+    setMessages((prev) => {
+      const lastAssistant = [...prev].reverse().find((msg) => msg.role === "assistant");
+      if (lastAssistant && !lastAssistant.content.trim()) {
+        return prev.map((msg) =>
+          msg.id === lastAssistant.id
+            ? { ...msg, content: "[已停止]", status: "error" as const }
+            : msg
+        );
+      }
+      return prev;
+    });
+  }
+
   async function handleSend() {
     if (!input.trim()) return;
+    
+    // 定义类型（在函数顶部，确保所有地方都能访问）
+    type ChunkEvent = { message_id: string; content: string; full_content: string };
+    type ToolCallsEvent = {
+      message_id: string;
+      tool_calls: Array<{
+        id: string;
+        type: string;
+        function: { name: string; arguments: string };
+      }>;
+      content: string;
+    };
+    
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
       content: input.trim(),
-      timestamp: new Date().toLocaleTimeString("zh-CN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      timestamp: formatTimestamp(),
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -172,22 +178,25 @@ function App() {
       id: assistantMsgId,
       role: "assistant",
       content: "",
-      timestamp: new Date().toLocaleTimeString("zh-CN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      timestamp: formatTimestamp(),
     };
     setMessages((prev) => [...prev, assistantMsg]);
 
+    // 在 try 块外声明变量，以便在 catch 块中也能访问
+    let unlistenChunk: UnlistenFn | undefined;
+    let unlistenToolCalls: UnlistenFn | undefined;
+    let unlistenDone: UnlistenFn | undefined;
+    let messagesToSend: Array<{ role: "user" | "assistant" | "system" | "tool"; content: string; tool_calls?: any; tool_call_id?: string }>;
+
     try {
       // 构建消息列表，确保格式正确
-      const messagesToSend = [
+      messagesToSend = [
         ...composedMessages,
         { role: "user" as const, content: userMsg.content },
       ];
       
       // 监听流式数据
-      const unlistenChunk = await listen<{ message_id: string; content: string; full_content: string }>(
+      unlistenChunk = await listen<ChunkEvent>(
         "llm-stream-chunk",
         (event) => {
           if (event.payload.message_id === assistantMsgId) {
@@ -202,18 +211,428 @@ function App() {
         }
       );
 
-      const unlistenDone = await listen<string>("llm-stream-done", (event) => {
+      // 监听 tool_calls 事件
+      unlistenToolCalls = await listen<ToolCallsEvent>("llm-stream-tool-calls", async (event) => {
+        if (event.payload.message_id === assistantMsgId) {
+          // 取消之前的监听器，避免冲突
+          if (unlistenChunk) unlistenChunk();
+          if (unlistenToolCalls) unlistenToolCalls();
+          const toolCalls = event.payload.tool_calls;
+          console.log("[前端] 收到 tool_calls: ", toolCalls);
+
+          // 先更新 assistant 消息，显示正在执行工具调用
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMsgId
+                ? {
+                    ...msg,
+                    content: "正在思考下一步计划…",
+                    tool_calls: toolCalls.map((tc) => ({
+                      id: tc.id,
+                      type: tc.type,
+                      function: {
+                        name: tc.function.name,
+                        arguments: tc.function.arguments,
+                      },
+                    })),
+                    toolCallResults: toolCalls.map((tc) => ({
+                      toolCallId: tc.id,
+                      toolName: tc.function.name,
+                      arguments: getToolArgumentsPreview(
+                        tc.function.arguments
+                      ),
+                      result: null,
+                      status: "pending" as const,
+                    })),
+                  }
+                : msg
+            )
+          );
+
+          for (const toolCall of toolCalls) {
+            const functionName = toolCall.function.name;
+            let functionArgs: Record<string, any>;
+            try {
+              functionArgs = parseToolArguments(
+                toolCall.function.arguments
+              );
+            } catch (error) {
+              setMessages((prev) =>
+                prev.map((msg) => {
+                  if (msg.id === assistantMsgId && msg.toolCallResults) {
+                    return {
+                      ...msg,
+                      toolCallResults: msg.toolCallResults.map((result) =>
+                        result.toolCallId === toolCall.id
+                          ? {
+                              ...result,
+                              result:
+                                (error as Error).message ??
+                                "工具参数解析失败",
+                              status: "error" as const,
+                            }
+                          : result
+                      ),
+                    };
+                  }
+                  return msg;
+                })
+              );
+              continue;
+            }
+
+            try {
+              let toolResult: any;
+              let toolStatus: ChatMessage["status"] = "success";
+
+              // 执行工具调用
+              if (functionName === "list_files") {
+                toolResult = await invoke<FileEntry[]>("list_files", {
+                  options: functionArgs,
+                });
+              } else if (functionName === "read_file") {
+                toolResult = await invoke<string>("read_file", {
+                  options: functionArgs,
+                });
+              } else if (functionName === "search_in_files") {
+                toolResult = await invoke<any[]>("search_in_files", {
+                  options: functionArgs,
+                });
+              } else if (functionName === "delete_file") {
+                toolResult = await invoke<string>("delete_file", {
+                  options: functionArgs,
+                });
+              } else if (functionName === "rename_file") {
+                toolResult = await invoke<string>("rename_file", {
+                  options: functionArgs,
+                });
+              } else if (functionName === "copy_file") {
+                toolResult = await invoke<string>("copy_file", {
+                  options: functionArgs,
+                });
+              } else if (functionName === "write_file") {
+                toolResult = await invoke<string>("write_file", {
+                  options: functionArgs,
+                });
+              } else if (functionName === "append_to_file") {
+                toolResult = await invoke<string>("append_to_file", {
+                  options: functionArgs,
+                });
+              } else if (functionName === "replace_in_file") {
+                toolResult = await invoke<string>("replace_in_file", {
+                  options: functionArgs,
+                });
+              } else if (functionName === "download_file") {
+                try {
+                  toolResult = await invoke<string>("download_file", {
+                    options: functionArgs,
+                  });
+                } catch (error) {
+                  toolResult = `下载失败: ${error}`;
+                  toolStatus = "error";
+                }
+              } else if (functionName === "fetch_webpage") {
+                toolResult = await invoke<any>("fetch_webpage", {
+                  options: functionArgs,
+                });
+              } else if (functionName === "run_command") {
+                toolResult = await invoke<any>("run_command", {
+                  options: functionArgs,
+                });
+              } else {
+                toolResult = `未知工具: ${functionName}`;
+                toolStatus = "error";
+              }
+
+              // 更新 assistant 消息，添加 tool_calls 和工具调用结果
+              setMessages((prev) =>
+                prev.map((msg) => {
+                  if (msg.id === assistantMsgId) {
+                    const existingResults = msg.toolCallResults || [];
+                    const resultIndex = existingResults.findIndex(
+                      (r) => r.toolCallId === toolCall.id
+                    );
+                    const newResult = {
+                      toolCallId: toolCall.id,
+                      toolName: functionName,
+                      arguments: functionArgs,
+                      result: toolResult,
+                      status: toolStatus as "pending" | "success" | "error",
+                    };
+                    const updatedResults =
+                      resultIndex >= 0
+                        ? existingResults.map((result, index) =>
+                            index === resultIndex ? newResult : result
+                          )
+                        : [...existingResults, newResult];
+
+                    return {
+                      ...msg,
+                      content:
+                        event.payload.content || "正在思考下一步计划…",
+                      tool_calls: toolCalls.map((tc) => ({
+                        id: tc.id,
+                        type: tc.type,
+                        function: {
+                          name: tc.function.name,
+                          arguments: tc.function.arguments,
+                        },
+                      })),
+                      toolCallResults: updatedResults,
+                    };
+                  }
+                  return msg;
+                })
+              );
+
+              // 继续对话，将 tool 结果发送给 LLM
+              const continueMessages = [
+                ...composedMessages,
+                { role: "user" as const, content: userMsg.content },
+                {
+                  role: "assistant" as const,
+                  content: event.payload.content,
+                  tool_calls: toolCalls.map((tc) => ({
+                    id: tc.id,
+                    type: tc.type,
+                    function: {
+                      name: tc.function.name,
+                      arguments: tc.function.arguments,
+                    },
+                  })),
+                },
+                {
+                  role: "tool" as const,
+                  content: JSON.stringify(toolResult),
+                  tool_call_id: toolCall.id,
+                },
+              ];
+
+              // 创建新的 assistant 消息用于接收继续对话的流式输出
+              const continueMsgId = crypto.randomUUID();
+              const continueAssistantMsg: ChatMessage = {
+                id: continueMsgId,
+                role: "assistant",
+                content: "",
+                timestamp: formatTimestamp(),
+              };
+              setMessages((prev) => [...prev, continueAssistantMsg]);
+
+              // 为继续对话设置监听器
+              const unlistenContinueChunk = await listen<ChunkEvent>("llm-stream-chunk", (chunkEvent) => {
+                if (chunkEvent.payload.message_id === continueMsgId) {
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === continueMsgId
+                        ? {
+                            ...msg,
+                            content: chunkEvent.payload.full_content,
+                          }
+                        : msg
+                    )
+                  );
+                }
+              });
+
+              // 保存继续对话的监听器
+              setActiveUnlisteners((prev) => {
+                const next = new Map(prev);
+                const existing = next.get(continueMsgId) || [];
+                next.set(continueMsgId, [...existing, unlistenContinueChunk]);
+                return next;
+              });
+
+              const unlistenContinueToolCalls = await listen<ToolCallsEvent>("llm-stream-tool-calls", async (toolEvent) => {
+                if (toolEvent.payload.message_id === continueMsgId) {
+                  // 递归处理 tool_calls（支持多轮 toolcall）
+                  const continueToolCalls = toolEvent.payload.tool_calls;
+                  console.log("[前端] 继续对话收到 tool_calls: ", continueToolCalls);
+
+                  for (const continueToolCall of continueToolCalls) {
+                    const continueFunctionName = continueToolCall.function.name;
+                    const continueFunctionArgs = parseToolArguments(
+                      continueToolCall.function.arguments
+                    );
+
+                    if (continueFunctionName === "list_files") {
+                      const continueToolResult = await invoke<FileEntry[]>(
+                        "list_files",
+                        {
+                          options: continueFunctionArgs,
+                        }
+                      );
+
+                      // 更新 continueMsgId 的 assistant 消息，添加工具调用结果
+                      setMessages((prev) =>
+                        prev.map((msg) => {
+                          if (msg.id === continueMsgId) {
+                            const existingResults = msg.toolCallResults || [];
+                            const newResult = {
+                              toolCallId: continueToolCall.id,
+                              toolName: continueFunctionName,
+                              arguments: continueFunctionArgs,
+                              result: continueToolResult,
+                              status: "success" as const,
+                            };
+                            return {
+                              ...msg,
+                              toolCallResults: [...existingResults, newResult],
+                            };
+                          }
+                          return msg;
+                        })
+                      );
+
+                      // 继续下一轮对话
+                      const nextMessages = [
+                        ...continueMessages,
+                        {
+                          role: "assistant" as const,
+                          content: toolEvent.payload.content,
+                          tool_calls: continueToolCalls.map((tc) => ({
+                            id: tc.id,
+                            type: tc.type,
+                            function: {
+                              name: tc.function.name,
+                              arguments: tc.function.arguments,
+                            },
+                          })),
+                        },
+                        {
+                          role: "tool" as const,
+                          content: JSON.stringify(continueToolResult),
+                          tool_call_id: continueToolCall.id,
+                        },
+                      ];
+
+                      const nextMsgId = crypto.randomUUID();
+                      const nextAssistantMsg: ChatMessage = {
+                        id: nextMsgId,
+                        role: "assistant",
+                        content: "",
+                        timestamp: formatTimestamp(),
+                      };
+                      setMessages((prev) => [...prev, nextAssistantMsg]);
+
+                      // 设置下一轮的监听器（简化处理，只支持一轮递归）
+                      const unlistenNextChunk = await listen<ChunkEvent>("llm-stream-chunk", (nextChunkEvent) => {
+                        if (nextChunkEvent.payload.message_id === nextMsgId) {
+                          setMessages((prev) =>
+                            prev.map((msg) =>
+                              msg.id === nextMsgId
+                                ? {
+                                    ...msg,
+                                    content: nextChunkEvent.payload.full_content,
+                                  }
+                                : msg
+                            )
+                          );
+                        }
+                      });
+
+                      const unlistenNextDone = await listen<string>(
+                        "llm-stream-done",
+                        (nextDoneEvent) => {
+                          if (nextDoneEvent.payload === nextMsgId) {
+                            setIsThinking(false);
+                            unlistenNextChunk();
+                            unlistenNextDone();
+                            // 从活动监听器列表中移除
+                            setActiveUnlisteners((prev) => {
+                              const next = new Map(prev);
+                              next.delete(nextMsgId);
+                              return next;
+                            });
+                          }
+                        }
+                      );
+
+                      // 保存下一轮对话的监听器
+                      setActiveUnlisteners((prev) => {
+                        const next = new Map(prev);
+                        next.set(nextMsgId, [unlistenNextChunk, unlistenNextDone]);
+                        return next;
+                      });
+
+                      await invoke("call_llm_stream", {
+                        messages: nextMessages,
+                        messageId: nextMsgId,
+                        model: "Qwen/Qwen2.5-72B-Instruct",
+                      });
+                    }
+                  }
+                }
+              });
+
+              const unlistenContinueDone = await listen<string>(
+                "llm-stream-done",
+                (continueDoneEvent) => {
+                  if (continueDoneEvent.payload === continueMsgId) {
+                    setIsThinking(false);
+                    unlistenContinueChunk();
+                    unlistenContinueToolCalls();
+                    unlistenContinueDone();
+                    // 从活动监听器列表中移除
+                    setActiveUnlisteners((prev) => {
+                      const next = new Map(prev);
+                      next.delete(continueMsgId);
+                      return next;
+                    });
+                  }
+                }
+              );
+
+              // 更新继续对话的监听器列表
+              setActiveUnlisteners((prev) => {
+                const next = new Map(prev);
+                const existing = next.get(continueMsgId) || [];
+                next.set(continueMsgId, [...existing, unlistenContinueToolCalls, unlistenContinueDone]);
+                return next;
+              });
+
+              // 继续调用 LLM
+              await invoke("call_llm_stream", {
+                messages: continueMessages,
+                messageId: continueMsgId,
+                model: "Qwen/Qwen2.5-72B-Instruct",
+              });
+            } catch (error) {
+              console.error("[ToolCall Error]", error);
+            }
+          }
+        }
+      });
+
+      unlistenDone = await listen<string>("llm-stream-done", (event) => {
         if (event.payload === assistantMsgId) {
           setIsThinking(false);
-          unlistenChunk();
-          unlistenDone();
+          if (unlistenChunk) unlistenChunk();
+          if (unlistenToolCalls) unlistenToolCalls();
+          if (unlistenDone) unlistenDone();
+          // 从活动监听器列表中移除
+          setActiveUnlisteners((prev) => {
+            const next = new Map(prev);
+            next.delete(assistantMsgId);
+            return next;
+          });
         }
+      });
+
+      // 保存监听器到活动列表
+      const unlisteners = [unlistenChunk, unlistenToolCalls, unlistenDone].filter(
+        (u): u is UnlistenFn => u !== undefined
+      );
+      setActiveUnlisteners((prev) => {
+        const next = new Map(prev);
+        next.set(assistantMsgId, unlisteners);
+        return next;
       });
 
       // 调用流式命令
       await invoke("call_llm_stream", {
         messages: messagesToSend,
         messageId: assistantMsgId,
+        model: "Qwen/Qwen2.5-72B-Instruct",
       });
     } catch (error) {
       // 详细错误信息输出到控制台（开发调试用）
@@ -270,124 +689,19 @@ function App() {
     }
   }
 
-  const formatSize = (size?: number | null) => {
-    if (!size) return "—";
-    const units = ["B", "KB", "MB", "GB", "TB"];
-    let value = size;
-    let unit = 0;
-    while (value >= 1024 && unit < units.length - 1) {
-      value /= 1024;
-      unit += 1;
-    }
-    return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unit]}`;
-  };
-
-  const formatTime = (ms?: number | null) => {
-    if (!ms) return "—";
-    const date = new Date(ms);
-    return date.toLocaleString("zh-CN", {
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  useEffect(() => {
-    let unlistenResize: UnlistenFn | undefined;
-
-    (async () => {
-      setIsMaximized(await appWindow.isMaximized());
-      unlistenResize = await appWindow.onResized(async () => {
-        setIsMaximized(await appWindow.isMaximized());
-      });
-    })();
-
-    return () => {
-      if (unlistenResize) {
-        unlistenResize();
-      }
-    };
-  }, []);
-
-  // 自动滚动到底部 - 只在用户发送新消息时滚动，流式输出时不滚动
-  const lastUserMessageCount = useRef(0);
-  useEffect(() => {
-    const userMessageCount = messages.filter((msg) => msg.role === "user").length;
-    // 只有当用户消息数量增加时才滚动（即用户发送了新消息）
-    if (userMessageCount > lastUserMessageCount.current) {
-      lastUserMessageCount.current = userMessageCount;
-      // 延迟一下确保 DOM 更新完成
-      setTimeout(() => {
-        if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-        }
-      }, 100);
-    }
-  }, [messages]);
-
-  const handleMinimize = () => {
-    void appWindow.minimize();
-  };
-
-  const handleMaximizeToggle = async () => {
-    const max = await appWindow.isMaximized();
-    if (max) {
-      await appWindow.unmaximize();
-    } else {
-      await appWindow.maximize();
-    }
-    setIsMaximized(!max);
-  };
-
-  const handleClose = () => {
-    void appWindow.close();
-  };
 
   return (
     <div className="h-screen bg-slate-950 text-slate-100 overflow-hidden flex flex-col">
-      <div className="flex-1 flex flex-col gap-4 p-4 sm:p-6 min-h-0">
-        <div
-          data-tauri-drag-region
-          className="flex items-center justify-between rounded-3xl border border-white/5 bg-white/5/30 px-5 py-3 text-sm text-slate-300 backdrop-blur-2xl shadow-[0_30px_90px_-70px_rgba(15,23,42,1)] flex-shrink-0"
-        >
-          <div className="flex items-center gap-3 text-white" data-tauri-drag-region>
-            <div className="rounded-2xl bg-white/10 p-2">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-white/50">
-                AI-PC-ELF
-              </p>
-              <p className="text-base font-semibold">桌面智能代理控制中心</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2" data-tauri-drag-region="false">
-            <button
-              onClick={handleMinimize}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/70 transition hover:border-white/30 hover:text-white"
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={() => void handleMaximizeToggle()}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/70 transition hover:border-white/30 hover:text-white"
-            >
-              <Square
-                className={cn("h-3.5 w-3.5", isMaximized ? "scale-90" : undefined)}
-              />
-            </button>
-            <button
-              onClick={handleClose}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/70 transition hover:border-white/30 hover:text-white hover:bg-rose-500/20"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
+      <div className="flex-1 flex flex-col gap-3 p-3 sm:gap-4 sm:p-4 min-h-0">
+        <WindowControls
+          isMaximized={isMaximized}
+          onMinimize={minimize}
+          onMaximizeToggle={maximizeToggle}
+          onClose={close}
+        />
 
-        <div className="grid flex-1 min-h-0 gap-6 lg:grid-cols-[320px_1fr]">
-          <aside className="flex flex-col overflow-y-auto rounded-3xl border border-white/5 bg-white/5/30 p-5 backdrop-blur-2xl shadow-[0_20px_90px_-60px_rgba(15,23,42,1)]">
+        <div className="grid flex-1 min-h-0 gap-4 lg:grid-cols-[280px_1fr] xl:grid-cols-[320px_1fr]">
+          <aside className="hidden lg:flex flex-col overflow-y-auto rounded-3xl border border-white/5 bg-white/5/30 p-4 xl:p-5 backdrop-blur-2xl shadow-[0_20px_90px_-60px_rgba(15,23,42,1)]">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">
@@ -395,7 +709,15 @@ function App() {
               </p>
               <p className="text-lg font-semibold">桌面 Agent</p>
             </div>
-            <button className="rounded-full bg-white/10 p-2 text-xs font-medium text-white/80 hover:bg-white/20 transition">
+            <button
+              onClick={() => {
+                setMessages(initialMessages);
+                setActiveUnlisteners(new Map());
+                setIsThinking(false);
+              }}
+              className="rounded-full bg-white/10 p-2 text-xs font-medium text-white/80 hover:bg-white/20 transition"
+              title="新建对话"
+            >
               New
             </button>
           </div>
@@ -483,114 +805,34 @@ function App() {
 
           <div className="flex flex-1 min-h-0 flex-col lg:flex-row">
             <div className="flex flex-1 min-h-0 flex-col">
-              <div
-                ref={messagesContainerRef}
-                className="flex-1 space-y-4 overflow-y-auto px-6 py-6 custom-scrollbar"
-              >
-                {messages.map((msg) => (
-                  <article
-                    key={msg.id}
-                    className={cn(
-                      "max-w-3xl rounded-3xl border px-5 py-4 shadow-sm transition",
-                      msg.role === "user"
-                        ? "ml-auto border-emerald-500/10 bg-emerald-500/5 text-emerald-50"
-                        : msg.role === "assistant"
-                          ? "border-white/5 bg-white/5 text-slate-100"
-                          : "border-cyan-500/10 bg-cyan-500/5 text-cyan-50",
-                    )}
-                  >
-                    <div className="mb-2 flex items-center gap-3 text-xs uppercase tracking-wide">
-                      {msg.role === "user" && (
-                        <>
-                          <span className="text-emerald-300">User</span>
-                          <span className="text-white/40">/ {msg.timestamp}</span>
-                        </>
-                      )}
-                      {msg.role === "assistant" && (
-                        <>
-                          <Bot className="h-4 w-4 text-white/60" />
-                          <span className="text-white/70">ELF</span>
-                        </>
-                      )}
-                      {msg.role === "tool" && (
-                        <>
-                          <TerminalSquare className="h-4 w-4 text-cyan-300" />
-                          <span className="text-cyan-200">
-                            {msg.tool ?? "tool-call"}
-                          </span>
-                        </>
-                      )}
-                      {msg.status === "error" && (
-                        <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] text-rose-200">
-                          error
-                        </span>
-                      )}
-                    </div>
-                    <p className="whitespace-pre-line text-sm leading-relaxed">
-                      {msg.content}
-                    </p>
-                  </article>
-                ))}
-                {isThinking && (
-                  <div className="flex items-center gap-3 text-xs text-slate-400">
-                    <TimerReset className="h-4 w-4 animate-spin" />
-                    正在思考下一步计划…
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
+              <ChatContainer
+                messages={messages}
+                isThinking={isThinking}
+                messagesEndRef={messagesEndRef}
+              />
 
-              <div className="border-t border-white/5 p-6">
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-inner">
-                  <div className="flex flex-wrap gap-2 text-xs text-slate-400">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-3 py-1">
-                      <ShieldCheck className="h-3 w-3" />
-                      沙箱模式
-                    </span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-3 py-1">
-                      <TerminalSquare className="h-3 w-3" />
-                      支持 toolcall
-                    </span>
-                  </div>
-
-                  <div className="mt-4 flex items-end gap-3">
-                    <textarea
-                      value={input}
-                      onChange={(event) => setInput(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" && !event.shiftKey) {
-                          event.preventDefault();
-                          void handleSend();
-                        }
-                      }}
-                      placeholder="告诉我接下来要做什么，例如『扫描 D:\\Workspace 最近的改动并整理』"
-                      className="min-h-[96px] flex-1 resize-none rounded-2xl border border-white/10 bg-transparent px-4 py-3 text-sm text-white placeholder:text-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
-                    />
-
-                    <button
-                      onClick={() => void handleSend()}
-                      className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400 text-slate-900 transition hover:bg-emerald-300"
-                    >
-                      <Send className="h-5 w-5" />
-                    </button>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-                    <div className="flex items-center gap-3">
-                      <button className="inline-flex items-center gap-1 rounded-full border border-white/5 px-3 py-1 hover:border-white/30 hover:text-white/80">
-                        <Plus className="h-3 w-3" />
-                        附加文件
-                      </button>
-                      <button className="inline-flex items-center gap-1 rounded-full border border-white/5 px-3 py-1 hover:border-white/30 hover:text-white/80">
-                        <TerminalSquare className="h-3 w-3" />
-                        命令模式
-                      </button>
-                    </div>
-                    <button className="inline-flex items-center gap-1 text-emerald-300">
-                      <ArrowUpRight className="h-3 w-3" />
-                      预览执行计划
-                    </button>
-                  </div>
+              <ChatInput
+                value={input}
+                onChange={setInput}
+                onSend={() => void handleSend()}
+                onStop={handleStop}
+                isThinking={isThinking}
+              />
+              <div className="px-6 pb-6 flex items-center justify-between text-xs text-slate-500">
+                <div className="flex items-center gap-3">
+                  <button className="inline-flex items-center gap-1 rounded-full border border-white/5 px-3 py-1 hover:border-white/30 hover:text-white/80">
+                    <Plus className="h-3 w-3" />
+                    附加文件
+                  </button>
+                  <button className="inline-flex items-center gap-1 rounded-full border border-white/5 px-3 py-1 hover:border-white/30 hover:text-white/80">
+                    <TerminalSquare className="h-3 w-3" />
+                    命令模式
+                  </button>
                 </div>
+                <button className="inline-flex items-center gap-1 text-emerald-300">
+                  <ArrowUpRight className="h-3 w-3" />
+                  预览执行计划
+                </button>
               </div>
             </div>
 

@@ -7,10 +7,23 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+.pnp
+.pnp.js
+
+# Build outputs
 dist
 dist-ssr
+build
 *.local
+
+# Compiled binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.pdb
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +35,38 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# OS files
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Backup files
+*.backup
+*.bak
+*.old
+*.tmp
+*.refactored
+*.orig
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+.cache
+.temp
+*.pid
+*.seed
+*.pid.lock

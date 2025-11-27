@@ -1,37 +1,39 @@
 # AI-PC-ELF 功能文档
 
-## 当前已实现的 Toolcall 功能
+## ✅ 已实现的工具（10个）
 
-### 1. `list_files` - 文件列表工具
+### 📁 文件列表和搜索
 
-**功能描述：** 扫描并列出指定目录下的文件和文件夹。
+1. **`list_files`** - 列出文件和文件夹
+2. **`read_file`** - 读取文件内容（默认最大 10MB）
+3. **`search_in_files`** - 在多个文件中搜索文本模式
 
-**参数：**
-- `path` (必需): 要扫描的目录路径，例如 `"D:\\Workspace"` 或 `"C:\\Users\\Username\\Documents"`
-- `recursive` (可选): 是否递归扫描子目录，默认为 `false`
-- `pattern` (可选): 文件名模式匹配（不区分大小写），例如 `"*.ts"` 或 `"test"`
-- `limit` (可选): 返回结果的最大数量，默认为 200
+### 🗑️ 文件操作
 
-**返回数据：**
-```typescript
-interface FileEntry {
-  path: string;           // 文件/文件夹的完整路径
-  file_type: string;      // "file" | "directory" | "other"
-  size?: number;          // 文件大小（字节），仅文件有值
-  modified_ms?: number;   // 最后修改时间（毫秒时间戳）
-}
-```
+4. **`delete_file`** - 删除文件或目录（支持递归）
+5. **`rename_file`** - 重命名/移动文件
+6. **`copy_file`** - 复制文件或目录（支持覆盖）
 
-**使用示例：**
-- "列出 D 盘 Workspace 目录下的所有文件"
-- "扫描 C 盘 Users 目录，查找所有 .ts 文件，递归搜索"
-- "查看 Downloads 文件夹中最近修改的文件，限制返回 50 个结果"
+### ✏️ 文件内容操作
 
-**前端调用方式：**
-- 可以通过左侧边栏的"索引/搜索"工具手动调用
-- 也可以通过对话让 AI 自动调用（需要 AI 理解并生成 toolcall）
+7. **`write_file`** - 创建新文件或覆盖现有文件
+8. **`append_to_file`** - 在文件末尾追加内容
+9. **`replace_in_file`** - 在文件中查找并替换文本
 
-## 对话功能
+### 🌐 网络操作
+
+10. **`download_file`** - 从 URL 下载文件到指定位置
+
+### 💻 系统命令
+
+11. **`run_command`** - 执行系统命令（PowerShell/CMD on Windows, Bash/Sh on Mac/Linux）
+
+## 📖 详细文档
+
+- [工具功能总结](./tools-summary.md) - 所有工具的详细说明和使用示例
+- [工具开发路线图](./tools-roadmap.md) - 未来计划添加的工具
+
+## 💬 对话功能
 
 ### 当前支持的操作
 
@@ -39,46 +41,49 @@ interface FileEntry {
    - 与 AI 进行自然语言对话
    - 流式输出响应，实时显示 AI 回复
 
-2. **文件系统操作**
-   - 通过 `list_files` 工具扫描和搜索文件
-   - 支持路径、递归、模式匹配等参数
+2. **自动工具调用**
+   - AI 可以理解用户需求并自动调用工具
+   - 支持多轮工具调用（toolcall 循环）
+   - 工具执行结果会自动反馈给 AI，继续对话
 
-### 如何与 AI 对话进行文件操作
+### 使用示例
 
-目前，AI 可以通过以下方式理解你的需求并调用工具：
+**文件操作：**
+- "列出 D 盘 Workspace 目录下的所有 TypeScript 文件"（默认不包含隐藏文件）
+- "列出 D 盘 Workspace 目录下的所有文件，包括隐藏文件"
+- "读取 `D:\Workspace\package.json` 的内容"
+- "在 `D:\Workspace` 中搜索 `useState`，只搜索 `.tsx` 文件"
 
-**示例对话：**
-- "帮我看看 D 盘 workspace 目录里有哪些最近修改的 TypeScript 文件"
-- "扫描一下我的 Downloads 文件夹，找出所有图片文件"
-- "列出 C 盘 Program Files 目录下的所有文件夹"
+**文件管理：**
+- "将 `D:\Workspace\old.txt` 重命名为 `new.txt`"
+- "复制 `D:\Workspace\src` 目录到 `D:\Backup\src`"
+- "删除 `D:\Workspace\temp` 目录及其所有内容"
 
-**注意：** 当前版本中，AI 的 toolcall 功能还在开发中。目前你可以：
-1. 通过左侧边栏的"索引/搜索"工具手动执行文件列表操作
-2. 在对话中描述需求，但需要手动触发工具调用（或等待 AI toolcall 功能完善）
+**文件内容编辑：**
+- "在 `D:\Workspace\config.json` 中将 `localhost` 替换为 `production.com`"
+- "在 `D:\Workspace\log.txt` 末尾追加一行 '操作完成'"
 
-## 计划中的功能
+**网络下载：**
+- "下载 `https://example.com/file.zip` 到桌面"
+- "从 `https://example.com/data.json` 下载文件，保存为 `C:\Users\Username\Desktop\data.json`"
 
-根据项目愿景，未来将支持以下功能：
+**系统命令：**
+- "执行 PowerShell 命令：`Get-Process | Select-Object -First 5`"
+- "在 CMD 中执行 `dir` 命令，工作目录设为桌面"
+- "使用 Bash 执行 `ls -la` 命令"
+- "安装 Node.js（使用包管理器命令）"
 
-1. **文件操作**
-   - 批量删除文件
-   - 批量重命名文件
-   - 移动/复制文件
+## 🔒 安全注意事项
 
-2. **文件内容操作**
-   - 在文件中搜索关键词
-   - 读取文件内容
-   - 修改文件内容
+1. **删除操作**: `delete_file` 默认移动到回收站（可恢复），设置 `permanent=true` 可永久删除
+2. **覆盖操作**: `write_file` 会完全覆盖现有文件
+3. **网络下载**: `download_file` 会下载任意 URL 的文件，注意来源可信度
+4. **文件大小**: `read_file` 限制 10MB，避免读取过大文件
+5. **系统命令**: `run_command` 可以执行任意系统命令，请谨慎使用，确保命令来源可信
 
-3. **系统操作**
-   - 清理 C 盘空间
-   - 更新/安装/卸载软件
-   - 修改系统设置
+## 🚀 计划中的功能
 
-4. **高级功能**
-   - 沙箱机制（展示修改了哪些文件、注册表等）
-   - 截图和点击操作
-   - 自动化操作流程
+参考 [工具开发路线图](./tools-roadmap.md) 了解未来计划。
 
 ## 技术栈
 
