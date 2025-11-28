@@ -43,6 +43,9 @@ pub fn run() {
             fetch_webpage,
             run_command,
         ])
+        .setup(|_app| {
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

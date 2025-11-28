@@ -1,11 +1,13 @@
 import { Minus, Square, X, Sparkles } from "lucide-react";
 import { cn } from "../utils";
 
+type WindowControlHandler = () => void | Promise<void>;
+
 interface WindowControlsProps {
   isMaximized: boolean;
-  onMinimize: () => void;
-  onMaximizeToggle: () => void;
-  onClose: () => void;
+  onMinimize: WindowControlHandler;
+  onMaximizeToggle: WindowControlHandler;
+  onClose: WindowControlHandler;
 }
 
 export function WindowControls({
@@ -14,32 +16,22 @@ export function WindowControls({
   onMaximizeToggle,
   onClose,
 }: WindowControlsProps) {
-  // 阻止按钮点击事件冒泡到拖拽区域
-  const handleMinimize = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log("[WindowControls] 最小化按钮被点击");
-    onMinimize();
+  const handleMinimize = () => {
+    void onMinimize();
   };
 
-  const handleMaximize = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log("[WindowControls] 最大化/还原按钮被点击");
-    onMaximizeToggle();
+  const handleMaximize = () => {
+    void onMaximizeToggle();
   };
 
-  const handleClose = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log("[WindowControls] 关闭按钮被点击");
-    onClose();
+  const handleClose = () => {
+    void onClose();
   };
 
   return (
-    <div
-      data-tauri-drag-region
-      className="flex items-center justify-between rounded-3xl border border-white/5 bg-white/5/30 px-5 py-3 text-sm text-slate-300 backdrop-blur-2xl shadow-[0_30px_90px_-70px_rgba(15,23,42,1)] flex-shrink-0"
-    >
-      {/* 左侧标题区域 - 可拖拽 */}
-      <div className="flex items-center gap-3 text-white pointer-events-none">
+    <div className="flex items-center justify-between rounded-3xl border border-white/5 bg-white/5/30 px-5 py-3 text-sm text-slate-300 backdrop-blur-2xl shadow-[0_30px_90px_-70px_rgba(15,23,42,1)] flex-shrink-0 select-none">
+      {/* 左侧标题区域 */}
+      <div className="flex items-center gap-3 text-white cursor-default">
         <div className="rounded-2xl bg-white/10 p-2">
           <Sparkles className="h-4 w-4" />
         </div>
@@ -50,8 +42,8 @@ export function WindowControls({
           <p className="text-base font-semibold">桌面智能代理控制中心</p>
         </div>
       </div>
-      
-      {/* 右侧按钮区域 - 不可拖拽，移除 data-tauri-drag-region 属性 */}
+
+      {/* 右侧按钮区域 */}
       <div className="flex items-center gap-2">
         <button
           onClick={handleMinimize}

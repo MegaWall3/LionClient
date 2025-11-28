@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "free-port": "node ./scripts/free-port.js 9527"
+    "tauri": "tauri"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

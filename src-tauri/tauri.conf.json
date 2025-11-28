@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "ELF - 桌面智能代理",
         "width": 1280,
         "height": 900,
