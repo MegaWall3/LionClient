@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ai-pc-elf",
+  "productName": "lion",
   "version": "0.1.0",
-  "identifier": "com.alienware.ai-pc-elf",
+  "identifier": "com.marginal-utility.lion",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:9527",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "ELF - 桌面智能代理",
+        "title": "Lion",
         "width": 1280,
         "height": 900,
         "minWidth": 960,

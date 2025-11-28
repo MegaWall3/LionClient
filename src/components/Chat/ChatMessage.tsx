@@ -88,7 +88,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         {message.role === "assistant" && (
           <>
             <Bot className="h-4 w-4 text-white/60" />
-            <span className="text-white/70">ELF</span>
+            <span className="text-white/70">Lion</span>
           </>
         )}
       </div>

@@ -15,7 +15,6 @@ export interface ListFilesOptions {
 
 export interface ReadFileOptions {
   path: string;
-  encoding?: string;
   max_size?: number;
 }
 
@@ -54,7 +53,6 @@ export interface CopyFileOptions {
 export interface WriteFileOptions {
   path: string;
   content: string;
-  encoding?: string;
 }
 
 export interface AppendToFileOptions {

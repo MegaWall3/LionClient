@@ -109,7 +109,6 @@ pub async fn list_files(options: ListFilesOptions) -> Result<Vec<FileEntry>, Str
 #[derive(Debug, serde::Deserialize)]
 pub struct ReadFileOptions {
     pub path: String,
-    pub encoding: Option<String>,
     pub max_size: Option<usize>,
 }
 
@@ -371,7 +370,6 @@ fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> io::Result<()> {
 pub struct WriteFileOptions {
     pub path: String,
     pub content: String,
-    pub encoding: Option<String>,
 }
 
 #[tauri::command]

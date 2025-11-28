@@ -69,7 +69,7 @@ const initialMessages: ChatMessage[] = [
     id: "m1",
     role: "assistant",
     content:
-      "你好！我是 ELF，你的桌面智能代理助手。我可以帮你完成各种电脑任务，比如搜索文件、管理文件、执行命令等。有什么需要帮助的吗？",
+      "你好！我是 Lion，你的桌面智能代理助手。我可以帮你完成各种电脑任务，比如搜索文件、管理文件、执行命令等。有什么需要帮助的吗？",
     timestamp: formatTimestamp(),
   },
 ];
@@ -705,7 +705,7 @@ function App() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">
-                AI-PC-ELF
+                Lion
               </p>
               <p className="text-lg font-semibold">桌面 Agent</p>
             </div>

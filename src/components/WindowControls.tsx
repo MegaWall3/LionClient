@@ -16,35 +16,47 @@ export function WindowControls({
   onMaximizeToggle,
   onClose,
 }: WindowControlsProps) {
-  const handleMinimize = () => {
+  const handleMinimize = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    event.preventDefault();
     void onMinimize();
   };
 
-  const handleMaximize = () => {
+  const handleMaximize = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    event.preventDefault();
     void onMaximizeToggle();
   };
 
-  const handleClose = () => {
+  const handleClose = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    event.preventDefault();
     void onClose();
   };
 
   return (
-    <div className="flex items-center justify-between rounded-3xl border border-white/5 bg-white/5/30 px-5 py-3 text-sm text-slate-300 backdrop-blur-2xl shadow-[0_30px_90px_-70px_rgba(15,23,42,1)] flex-shrink-0 select-none">
-      {/* 左侧标题区域 */}
-      <div className="flex items-center gap-3 text-white cursor-default">
+    <div
+      data-tauri-drag-region
+      className="flex items-center justify-between rounded-3xl border border-white/5 bg-white/5/30 px-5 py-3 text-sm text-slate-300 backdrop-blur-2xl shadow-[0_30px_90px_-70px_rgba(15,23,42,1)] flex-shrink-0 select-none"
+    >
+      {/* 左侧标题区域 - 可拖动 */}
+      <div className="flex items-center gap-3 text-white cursor-move">
         <div className="rounded-2xl bg-white/10 p-2">
           <Sparkles className="h-4 w-4" />
         </div>
         <div>
           <p className="text-xs uppercase tracking-[0.35em] text-white/50">
-            AI-PC-ELF
+            Lion
           </p>
           <p className="text-base font-semibold">桌面智能代理控制中心</p>
         </div>
       </div>
 
-      {/* 右侧按钮区域 */}
-      <div className="flex items-center gap-2">
+      {/* 右侧按钮区域 - 禁止拖动 */}
+      <div
+        data-tauri-drag-region="false"
+        className="flex items-center gap-2 cursor-default"
+      >
         <button
           onClick={handleMinimize}
           className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/70 transition hover:border-white/30 hover:text-white cursor-pointer"
