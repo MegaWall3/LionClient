@@ -1,81 +1,82 @@
-import { Send, TimerReset, ShieldCheck, TerminalSquare, Square } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Send, Square } from "lucide-react";
 import { cn } from "../../utils";
 
 interface ChatInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  onSend: () => void;
-  onStop?: () => void;
+  onSend: (message: string) => void;
+  onStop: () => void;
   isThinking: boolean;
-  disabled?: boolean;
+  placeholder?: string;
 }
 
 export function ChatInput({
-  value,
-  onChange,
   onSend,
   onStop,
   isThinking,
-  disabled,
+  placeholder = "输入消息... (Shift+Enter 换行，Enter 发送)",
 }: ChatInputProps) {
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const [input, setInput] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 自动调整高度
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [input]);
+
+  const handleSend = () => {
+    if (!input.trim() || isThinking) return;
+    onSend(input);
+    setInput("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (!disabled && !isThinking && value.trim()) {
-        onSend();
-      }
+      handleSend();
     }
   };
 
   return (
-    <div className="border-t border-white/5 p-6">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-inner">
-        <div className="flex flex-wrap gap-2 text-xs text-slate-400">
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-3 py-1">
-            <ShieldCheck className="h-3 w-3" />
-            沙箱模式
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/5 px-3 py-1">
-            <TerminalSquare className="h-3 w-3" />
-            工具就绪
-          </span>
-        </div>
-        <div className="mt-4 flex gap-3">
-          <textarea
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="输入你的指令..."
-            disabled={disabled || isThinking}
-            rows={3}
+    <div className="border-t border-gray-200 bg-white p-4">
+      <div className="flex gap-2">
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className="flex-1 resize-none rounded-lg border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent max-h-32"
+          rows={1}
+          disabled={isThinking}
+        />
+
+        {isThinking ? (
+          <button
+            onClick={onStop}
+            className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
+            title="停止生成"
+          >
+            <Square className="w-5 h-5" />
+          </button>
+        ) : (
+          <button
+            onClick={handleSend}
+            disabled={!input.trim()}
             className={cn(
-              "flex-1 resize-none rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-white/30 focus:outline-none focus:ring-2 focus:ring-white/20",
-              (disabled || isThinking) && "opacity-50 cursor-not-allowed"
+              "flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg transition-colors",
+              input.trim()
+                ? "bg-blue-500 text-white hover:bg-blue-600"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
             )}
-          />
-          {isThinking ? (
-            <button
-              onClick={onStop}
-              className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500 text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-400 hover:shadow-rose-400/40"
-              title="停止生成"
-            >
-              <Square className="h-5 w-5 fill-current" />
-            </button>
-          ) : (
-            <button
-              onClick={onSend}
-              disabled={disabled || !value.trim()}
-              className={cn(
-                "inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 hover:shadow-emerald-400/40 disabled:opacity-50 disabled:cursor-not-allowed"
-              )}
-              title="发送消息"
-            >
-              <Send className="h-5 w-5" />
-            </button>
-          )}
-        </div>
+            title="发送消息"
+          >
+            <Send className="w-5 h-5" />
+          </button>
+        )}
       </div>
     </div>
   );
 }
-

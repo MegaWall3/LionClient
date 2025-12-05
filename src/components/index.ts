@@ -1,5 +1,5 @@
 export * from "./WindowControls";
-export * from "./Chat/ChatMessage";
-export * from "./Chat/ChatInput";
-export * from "./Chat/ChatContainer";
-
+export * from "./Chat";
+export * from "./Sidebar";
+export * from "./ToolTracePanel";
+export * from "./InstantToolPanel";

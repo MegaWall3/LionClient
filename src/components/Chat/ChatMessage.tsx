@@ -16,14 +16,13 @@ interface ChatMessageProps {
 function ToolCallResult({
   toolCall,
 }: {
-  toolCall: ChatMessageType["toolCallResults"][0];
+  toolCall: NonNullable<ChatMessageType["toolCallResults"]>[0];
 }) {
-  const [isExpanded, setIsExpanded] = useState(
-    toolCall.status === "pending"
-  );
-  const resultStr = typeof toolCall.result === "string" 
-    ? toolCall.result 
-    : JSON.stringify(toolCall.result, null, 2);
+  const [isExpanded, setIsExpanded] = useState(toolCall.status === "pending");
+  const resultStr =
+    typeof toolCall.result === "string"
+      ? toolCall.result
+      : JSON.stringify(toolCall.result, null, 2);
 
   return (
     <div className="mt-2 rounded-xl border border-white/10 bg-white/5 p-3">
@@ -38,13 +37,20 @@ function ToolCallResult({
         )}
         <TerminalSquare className="h-3 w-3" />
         <span className="font-medium">执行工具调用: {toolCall.toolName}</span>
-        <span className={cn(
-          "ml-auto rounded-full px-2 py-0.5 text-[10px]",
-          toolCall.status === "success" && "bg-emerald-500/20 text-emerald-300",
-          toolCall.status === "error" && "bg-rose-500/20 text-rose-300",
-          toolCall.status === "pending" && "bg-amber-500/20 text-amber-300"
-        )}>
-          {toolCall.status === "success" ? "成功" : toolCall.status === "error" ? "错误" : "执行中"}
+        <span
+          className={cn(
+            "ml-auto rounded-full px-2 py-0.5 text-[10px]",
+            toolCall.status === "success" &&
+              "bg-emerald-500/20 text-emerald-300",
+            toolCall.status === "error" && "bg-rose-500/20 text-rose-300",
+            toolCall.status === "pending" && "bg-amber-500/20 text-amber-300"
+          )}
+        >
+          {toolCall.status === "success"
+            ? "成功"
+            : toolCall.status === "error"
+            ? "错误"
+            : "执行中"}
         </span>
       </button>
       {isExpanded && (
@@ -111,15 +117,17 @@ export function ChatMessage({ message }: ChatMessageProps) {
               …
             </div>
           )}
-        
+
         {/* 显示工具调用结果 */}
-        {message.role === "assistant" && message.toolCallResults && message.toolCallResults.length > 0 && (
-          <div className="mt-3 space-y-2">
-            {message.toolCallResults.map((toolCall) => (
-              <ToolCallResult key={toolCall.toolCallId} toolCall={toolCall} />
-            ))}
-          </div>
-        )}
+        {message.role === "assistant" &&
+          message.toolCallResults &&
+          message.toolCallResults.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {message.toolCallResults.map((toolCall) => (
+                <ToolCallResult key={toolCall.toolCallId} toolCall={toolCall} />
+              ))}
+            </div>
+          )}
       </div>
       {message.status === "error" && (
         <div className="mt-2 text-xs text-rose-400">错误</div>
@@ -127,4 +135,3 @@ export function ChatMessage({ message }: ChatMessageProps) {
     </article>
   );
 }
-

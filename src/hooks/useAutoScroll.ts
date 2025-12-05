@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { ChatMessage } from "../types";
 
-export function useAutoScroll(messages: ChatMessage[], isThinking: boolean) {
+export function useAutoScroll(messages: ChatMessage[], _isThinking: boolean) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const lastUserMessageCount = useRef(0);
 
