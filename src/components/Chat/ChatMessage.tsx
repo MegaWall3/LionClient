@@ -1,13 +1,7 @@
+import { Bot, ChevronDown, ChevronRight, Hourglass, TerminalSquare } from "lucide-react";
 import { useState } from "react";
-import {
-  Bot,
-  TerminalSquare,
-  ChevronDown,
-  ChevronRight,
-  Hourglass,
-} from "lucide-react";
-import { cn } from "../../utils";
 import type { ChatMessage as ChatMessageType } from "../../types";
+import { cn } from "../../utils";
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -27,30 +21,22 @@ function ToolCallResult({
   return (
     <div className="mt-2 rounded-xl border border-white/10 bg-white/5 p-3">
       <button
+        type="button"
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex w-full items-center gap-2 text-left text-xs text-cyan-200 hover:text-cyan-100"
       >
-        {isExpanded ? (
-          <ChevronDown className="h-3 w-3" />
-        ) : (
-          <ChevronRight className="h-3 w-3" />
-        )}
+        {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
         <TerminalSquare className="h-3 w-3" />
         <span className="font-medium">执行工具调用: {toolCall.toolName}</span>
         <span
           className={cn(
             "ml-auto rounded-full px-2 py-0.5 text-[10px]",
-            toolCall.status === "success" &&
-              "bg-emerald-500/20 text-emerald-300",
+            toolCall.status === "success" && "bg-emerald-500/20 text-emerald-300",
             toolCall.status === "error" && "bg-rose-500/20 text-rose-300",
             toolCall.status === "pending" && "bg-amber-500/20 text-amber-300"
           )}
         >
-          {toolCall.status === "success"
-            ? "成功"
-            : toolCall.status === "error"
-            ? "错误"
-            : "执行中"}
+          {toolCall.status === "success" ? "成功" : toolCall.status === "error" ? "错误" : "执行中"}
         </span>
       </button>
       {isExpanded && (
@@ -104,9 +90,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         </p>
 
         {message.role === "assistant" &&
-          message.toolCallResults?.some(
-            (toolCall) => toolCall.status === "pending"
-          ) && (
+          message.toolCallResults?.some((toolCall) => toolCall.status === "pending") && (
             <div className="mt-2 flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-200">
               <Hourglass className="h-3 w-3 animate-pulse" />
               正在执行{" "}
@@ -129,9 +113,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             </div>
           )}
       </div>
-      {message.status === "error" && (
-        <div className="mt-2 text-xs text-rose-400">错误</div>
-      )}
+      {message.status === "error" && <div className="mt-2 text-xs text-rose-400">错误</div>}
     </article>
   );
 }

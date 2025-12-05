@@ -1,6 +1,6 @@
 import { TimerReset } from "lucide-react";
-import { ChatMessage } from "./ChatMessage";
 import type { ChatMessage as ChatMessageType } from "../../types";
+import { ChatMessage } from "./ChatMessage";
 
 interface ChatContainerOriginalProps {
   messages: ChatMessageType[];
@@ -28,4 +28,3 @@ export function ChatContainerOriginal({
     </div>
   );
 }
-

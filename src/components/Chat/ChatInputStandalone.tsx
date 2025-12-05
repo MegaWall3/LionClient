@@ -1,5 +1,5 @@
 import { Send, Square } from "lucide-react";
-import { Dispatch, SetStateAction } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
 interface ChatInputStandaloneProps {
   value: string;
@@ -39,6 +39,7 @@ export function ChatInputStandalone({
         />
         {isThinking ? (
           <button
+            type="button"
             onClick={onStop}
             className="flex-shrink-0 rounded-2xl bg-rose-500/90 p-3 text-white transition hover:bg-rose-500"
             title="停止生成"
@@ -47,6 +48,7 @@ export function ChatInputStandalone({
           </button>
         ) : (
           <button
+            type="button"
             onClick={onSend}
             disabled={!value.trim()}
             className="flex-shrink-0 rounded-2xl bg-emerald-500/90 p-3 text-white transition hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -59,4 +61,3 @@ export function ChatInputStandalone({
     </div>
   );
 }
-

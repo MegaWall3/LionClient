@@ -1,6 +1,6 @@
 import { FolderSearch2 } from "lucide-react";
-import { formatSize, formatTime } from "../utils";
 import type { FileEntry } from "../types";
+import { formatSize, formatTime } from "../utils";
 
 interface InstantToolPanelProps {
   listPath: string;
@@ -34,7 +34,7 @@ export function InstantToolPanel({
       {/* 标题 */}
       <div className="flex items-center justify-between text-xs uppercase tracking-wide text-slate-500">
         <span>即时工具 · 列目录</span>
-        <button onClick={onReset} className="text-white/60 hover:text-white">
+        <button type="button" onClick={onReset} className="text-white/60 hover:text-white">
           重置
         </button>
       </div>
@@ -63,6 +63,7 @@ export function InstantToolPanel({
           递归子目录
         </label>
         <button
+          type="button"
           onClick={onExecute}
           disabled={listLoading}
           className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400/90 px-3 py-2 text-sm font-semibold text-slate-900 transition hover:bg-emerald-300 disabled:opacity-60"
@@ -76,18 +77,11 @@ export function InstantToolPanel({
       {/* 结果列表 */}
       <div className="mt-4 max-h-48 space-y-2 overflow-y-auto text-xs">
         {listResults.length === 0 && !listLoading ? (
-          <p className="text-slate-500">
-            结果将展示在这里，你也可以把这些数据写回聊天中。
-          </p>
+          <p className="text-slate-500">结果将展示在这里，你也可以把这些数据写回聊天中。</p>
         ) : (
           listResults.map((entry) => (
-            <div
-              key={entry.path}
-              className="rounded-2xl border border-white/5 bg-white/5 p-3"
-            >
-              <p className="truncate text-[13px] font-semibold text-white">
-                {entry.path}
-              </p>
+            <div key={entry.path} className="rounded-2xl border border-white/5 bg-white/5 p-3">
+              <p className="truncate text-[13px] font-semibold text-white">{entry.path}</p>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
                 <span className="rounded-full border border-white/10 px-2 py-0.5 uppercase tracking-wide">
                   {entry.file_type}
@@ -102,4 +96,3 @@ export function InstantToolPanel({
     </div>
   );
 }
-

@@ -34,9 +34,7 @@ export function parseToolArguments(raw: string): Record<string, any> {
 
       throw new Error("工具参数必须是对象");
     } catch (error) {
-      throw new Error(
-        `工具参数解析失败: ${(error as Error).message ?? "格式不正确"}`
-      );
+      throw new Error(`工具参数解析失败: ${(error as Error).message ?? "格式不正确"}`);
     }
   }
 
@@ -46,9 +44,7 @@ export function parseToolArguments(raw: string): Record<string, any> {
 /**
  * 获取工具参数预览，解析失败时返回原始字符串
  */
-export function getToolArgumentsPreview(
-  raw: string
-): Record<string, any> | string {
+export function getToolArgumentsPreview(raw: string): Record<string, any> | string {
   try {
     return parseToolArguments(raw);
   } catch {

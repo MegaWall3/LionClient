@@ -1,4 +1,4 @@
-import { Minus, Square, X, Sparkles } from "lucide-react";
+import { Minus, Sparkles, Square, X } from "lucide-react";
 import { cn } from "../utils";
 
 type WindowControlHandler = () => void | Promise<void>;
@@ -45,18 +45,13 @@ export function WindowControls({
           <Sparkles className="h-4 w-4" />
         </div>
         <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-white/50">
-            Lion
-          </p>
+          <p className="text-xs uppercase tracking-[0.35em] text-white/50">Lion</p>
           <p className="text-base font-semibold">桌面智能代理控制中心</p>
         </div>
       </div>
 
       {/* 右侧按钮区域 - 禁止拖动 */}
-      <div
-        data-tauri-drag-region="false"
-        className="flex items-center gap-2 cursor-default"
-      >
+      <div data-tauri-drag-region="false" className="flex items-center gap-2 cursor-default">
         <button
           onClick={handleMinimize}
           className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/70 transition hover:border-white/30 hover:text-white cursor-pointer"
@@ -87,4 +82,3 @@ export function WindowControls({
     </div>
   );
 }
-

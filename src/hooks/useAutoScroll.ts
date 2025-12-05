@@ -21,4 +21,3 @@ export function useAutoScroll(messages: ChatMessage[], _isThinking: boolean) {
 
   return messagesEndRef;
 }
-

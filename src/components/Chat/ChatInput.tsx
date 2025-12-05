@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
 import { Send, Square } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "../../utils";
 
 interface ChatInputProps {
@@ -55,6 +55,7 @@ export function ChatInput({
 
         {isThinking ? (
           <button
+            type="button"
             onClick={onStop}
             className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
             title="停止生成"
@@ -63,6 +64,7 @@ export function ChatInput({
           </button>
         ) : (
           <button
+            type="button"
             onClick={handleSend}
             disabled={!input.trim()}
             className={cn(

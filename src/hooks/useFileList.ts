@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useState } from "react";
 import type { FileEntry } from "../types";
 
 /**
@@ -36,8 +36,7 @@ export function useFileList() {
       setListResults(data);
     } catch (error) {
       const message =
-        (error as { message?: string })?.message ??
-        "无法列出文件，请检查路径或权限。";
+        (error as { message?: string })?.message ?? "无法列出文件，请检查路径或权限。";
       setListError(message);
     } finally {
       setListLoading(false);
@@ -71,4 +70,3 @@ export function useFileList() {
     resetFileList,
   };
 }
-

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function useWindowControls() {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -78,4 +78,3 @@ export function useWindowControls() {
     close,
   };
 }
-

@@ -1,9 +1,4 @@
-import {
-  Download,
-  FolderSearch2,
-  ShieldCheck,
-  TerminalSquare,
-} from "lucide-react";
+import { Download, FolderSearch2, ShieldCheck, TerminalSquare } from "lucide-react";
 import type { ToolTrace } from "../types";
 
 /**
@@ -39,4 +34,3 @@ export const statusBadges: Record<ToolTrace["status"], string> = {
  * 默认 LLM 模型
  */
 export const DEFAULT_MODEL = "Qwen/Qwen2.5-72B-Instruct";
-

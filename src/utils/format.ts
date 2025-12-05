@@ -42,4 +42,3 @@ export function formatRelativeTime(ms?: number | null): string {
   const date = new Date(ms);
   return formatDistanceToNow(date, { addSuffix: true, locale: zhCN });
 }
-

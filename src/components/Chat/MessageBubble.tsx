@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import type { ChatMessage } from "../../types";
 import { cn } from "../../utils";
 
@@ -32,9 +32,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       {/* 消息内容 */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-sm font-medium text-gray-900">
-            {isUser ? "You" : "Lion"}
-          </span>
+          <span className="text-sm font-medium text-gray-900">{isUser ? "You" : "Lion"}</span>
           <span className="text-xs text-gray-500">{message.timestamp}</span>
           {isError && (
             <span className="text-xs text-red-500 flex items-center gap-1">
@@ -69,27 +67,23 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                   {result.status === "success" && (
                     <CheckCircle2 className="w-4 h-4 text-green-500" />
                   )}
-                  {result.status === "error" && (
-                    <XCircle className="w-4 h-4 text-red-500" />
-                  )}
+                  {result.status === "error" && <XCircle className="w-4 h-4 text-red-500" />}
                   <span className="text-xs font-medium text-gray-700">
                     执行工具调用: {result.toolName}
                   </span>
                   <span
                     className={cn(
                       "text-xs px-2 py-0.5 rounded-full",
-                      result.status === "pending" &&
-                        "bg-blue-100 text-blue-700",
-                      result.status === "success" &&
-                        "bg-green-100 text-green-700",
+                      result.status === "pending" && "bg-blue-100 text-blue-700",
+                      result.status === "success" && "bg-green-100 text-green-700",
                       result.status === "error" && "bg-red-100 text-red-700"
                     )}
                   >
                     {result.status === "pending"
                       ? "执行中"
                       : result.status === "success"
-                      ? "成功"
-                      : "失败"}
+                        ? "成功"
+                        : "失败"}
                   </span>
                 </div>
 
@@ -122,4 +116,3 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     </div>
   );
 }
-

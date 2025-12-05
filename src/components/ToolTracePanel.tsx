@@ -1,7 +1,7 @@
 import { ShieldCheck, Sparkles, TimerReset } from "lucide-react";
-import { cn } from "../utils";
 import { statusBadges } from "../constants";
 import type { ToolTrace } from "../types";
+import { cn } from "../utils";
 
 interface ToolTracePanelProps {
   toolTrace: ToolTrace[];
@@ -13,16 +13,15 @@ export function ToolTracePanel({ toolTrace }: ToolTracePanelProps) {
       {/* 工具轨迹标题 */}
       <div className="flex items-center justify-between text-xs uppercase tracking-wide text-slate-500">
         <span>工具轨迹</span>
-        <button className="text-white/70 hover:text-white">查看日志</button>
+        <button type="button" className="text-white/70 hover:text-white">
+          查看日志
+        </button>
       </div>
 
       {/* 工具轨迹列表 */}
       <div className="space-y-4">
         {toolTrace.map((trace) => (
-          <div
-            key={trace.id}
-            className="rounded-2xl border border-white/5 bg-white/5 p-4"
-          >
+          <div key={trace.id} className="rounded-2xl border border-white/5 bg-white/5 p-4">
             <div className="flex items-center justify-between text-xs text-slate-400">
               <span>{trace.startedAt}</span>
               <span
@@ -34,9 +33,7 @@ export function ToolTracePanel({ toolTrace }: ToolTracePanelProps) {
                 {trace.status}
               </span>
             </div>
-            <p className="mt-2 text-sm font-semibold text-white">
-              {trace.label}
-            </p>
+            <p className="mt-2 text-sm font-semibold text-white">{trace.label}</p>
             <p className="mt-1 text-xs text-slate-400">{trace.detail}</p>
           </div>
         ))}
@@ -62,4 +59,3 @@ export function ToolTracePanel({ toolTrace }: ToolTracePanelProps) {
     </div>
   );
 }
-

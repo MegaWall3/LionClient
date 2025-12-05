@@ -31,4 +31,3 @@ export interface ToolTrace {
   detail: string;
   startedAt: string;
 }
-

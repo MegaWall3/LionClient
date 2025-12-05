@@ -1,6 +1,6 @@
 import type { ChatMessage } from "../../types";
-import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
+import { MessageList } from "./MessageList";
 
 interface ChatContainerProps {
   messages: ChatMessage[];
@@ -18,11 +18,7 @@ export function ChatContainer({
   return (
     <div className="flex flex-col h-full">
       <MessageList messages={messages} isThinking={isThinking} />
-      <ChatInput
-        onSend={onSendMessage}
-        onStop={onStopGeneration}
-        isThinking={isThinking}
-      />
+      <ChatInput onSend={onSendMessage} onStop={onStopGeneration} isThinking={isThinking} />
     </div>
   );
 }
