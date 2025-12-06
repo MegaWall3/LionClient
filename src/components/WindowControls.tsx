@@ -1,5 +1,4 @@
 import { Minus, Sparkles, Square, X } from "lucide-react";
-import { cn } from "../utils";
 
 type WindowControlHandler = () => void | Promise<void>;
 
@@ -66,9 +65,7 @@ export function WindowControls({
           title={isMaximized ? "还原" : "最大化"}
           type="button"
         >
-          <Square
-            className={cn("h-3.5 w-3.5 pointer-events-none", isMaximized ? "scale-90" : undefined)}
-          />
+          <Square className={`h-3.5 w-3.5 pointer-events-none ${isMaximized ? "scale-90" : ""}`} />
         </button>
         <button
           onClick={handleClose}

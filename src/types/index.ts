@@ -24,8 +24,8 @@ export interface ToolCall {
 export interface ToolCallResult {
   toolCallId: string;
   toolName: string;
-  arguments: Record<string, any> | string;
-  result: any;
+  arguments: Record<string, unknown> | string;
+  result: unknown;
   status: "pending" | "success" | "error";
 }
 
@@ -35,8 +35,8 @@ export interface ToolTrace {
   name?: string;
   label: string;
   detail: string;
-  args?: Record<string, any>;
-  result?: any;
+  args?: Record<string, unknown>;
+  result?: unknown;
   timestamp?: string;
   startedAt: string;
   status: "queued" | "running" | "done" | "error";
@@ -55,7 +55,7 @@ export interface FileEntry {
 
 // 快捷操作
 export interface QuickAction {
-  icon: any; // React component
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   prompt: string;
 }
@@ -77,12 +77,12 @@ export interface LLMToolStartEvent {
   message_id: string;
   tool_id: string;
   tool_name: string;
-  arguments: Record<string, any>;
+  arguments: Record<string, unknown>;
 }
 
 export interface LLMToolDoneEvent {
   message_id: string;
   tool_id: string;
-  result: any;
+  result: unknown;
   success: boolean;
 }

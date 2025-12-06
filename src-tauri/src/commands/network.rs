@@ -156,15 +156,15 @@ pub async fn fetch_webpage(options: FetchWebpageOptions) -> Result<WebpageConten
         .map_err(|e| format!("读取响应失败: {}", e))?;
 
     // 解析 HTML
-    let document = Html::parse_document(&html);
-    
-    // 提取标题
+        let document = Html::parse_document(&html);
+        
+        // 提取标题
     let title = document.select(&Selector::parse("title").unwrap())
-        .next()
-        .map(|e| e.text().collect::<String>().trim().to_string());
+            .next()
+            .map(|e| e.text().collect::<String>().trim().to_string());
 
     // 提取文本
-    let text_content = if extract_text {
+        let text_content = if extract_text {
         let body_text: String = document
             .select(&Selector::parse("body").unwrap())
             .next()
@@ -173,79 +173,79 @@ pub async fn fetch_webpage(options: FetchWebpageOptions) -> Result<WebpageConten
         
         let cleaned = regex::Regex::new(r"\s+").unwrap()
             .replace_all(&body_text, " ")
-            .trim()
-            .to_string();
-        
+                .trim()
+                .to_string();
+            
         Some(if cleaned.len() > max_length {
             format!("{}...", &cleaned[..max_length])
-        } else {
+            } else {
             cleaned
         })
-    } else {
-        None
-    };
+        } else {
+            None
+        };
 
-    // 提取链接
-    let links = if extract_links {
+        // 提取链接
+        let links = if extract_links {
         document.select(&Selector::parse("a[href]").unwrap())
             .filter_map(|e| {
                 Some(LinkInfo {
                     href: e.value().attr("href")?.to_string(),
                     text: e.text().collect::<String>().trim().to_string(),
                 })
-            })
-            .collect()
-    } else {
-        Vec::new()
-    };
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
 
-    // 提取 meta 信息
-    let meta = if extract_meta {
-        let mut description = None;
-        let mut keywords = None;
-        let mut author = None;
-        let mut og_title = None;
-        let mut og_description = None;
-        let mut og_image = None;
+        // 提取 meta 信息
+        let meta = if extract_meta {
+            let mut description = None;
+            let mut keywords = None;
+            let mut author = None;
+            let mut og_title = None;
+            let mut og_description = None;
+            let mut og_image = None;
 
         for meta_elem in document.select(&Selector::parse("meta").unwrap()) {
             if let Some(content) = meta_elem.value().attr("content") {
                 match meta_elem.value().attr("name") {
-                    Some("description") => description = Some(content.to_string()),
-                    Some("keywords") => keywords = Some(content.to_string()),
-                    Some("author") => author = Some(content.to_string()),
-                    _ => {}
-                }
+                        Some("description") => description = Some(content.to_string()),
+                        Some("keywords") => keywords = Some(content.to_string()),
+                        Some("author") => author = Some(content.to_string()),
+                        _ => {}
+                    }
                 match meta_elem.value().attr("property") {
-                    Some("og:title") => og_title = Some(content.to_string()),
-                    Some("og:description") => og_description = Some(content.to_string()),
-                    Some("og:image") => og_image = Some(content.to_string()),
-                    _ => {}
+                        Some("og:title") => og_title = Some(content.to_string()),
+                        Some("og:description") => og_description = Some(content.to_string()),
+                        Some("og:image") => og_image = Some(content.to_string()),
+                        _ => {}
+                    }
                 }
             }
-        }
 
         MetaInfo { description, keywords, author, og_title, og_description, og_image }
-    } else {
-        MetaInfo {
-            description: None,
-            keywords: None,
-            author: None,
-            og_title: None,
-            og_description: None,
-            og_image: None,
-        }
-    };
+        } else {
+            MetaInfo {
+                description: None,
+                keywords: None,
+                author: None,
+                og_title: None,
+                og_description: None,
+                og_image: None,
+            }
+        };
 
-    Ok(WebpageContent {
-        url: options.url,
-        title,
-        text_content,
-        html_content: if !extract_text { Some(html) } else { None },
-        links,
-        meta,
-        status_code,
-    })
+        Ok(WebpageContent {
+            url: options.url,
+            title,
+            text_content,
+            html_content: if !extract_text { Some(html) } else { None },
+            links,
+            meta,
+            status_code,
+        })
 }
 
 /// 从 URL 提取文件名

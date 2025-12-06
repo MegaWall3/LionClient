@@ -5,7 +5,7 @@ import type { FileEntry } from "../types";
  * 工具执行结果
  */
 export interface ToolExecutionResult {
-  result: any;
+  result: unknown;
   status: "success" | "error";
 }
 
@@ -14,10 +14,10 @@ export interface ToolExecutionResult {
  */
 export async function executeToolCall(
   functionName: string,
-  functionArgs: Record<string, any>
+  functionArgs: Record<string, unknown>
 ): Promise<ToolExecutionResult> {
   try {
-    let toolResult: any;
+    let toolResult: unknown;
 
     switch (functionName) {
       case "list_files":
@@ -33,7 +33,7 @@ export async function executeToolCall(
         break;
 
       case "search_in_files":
-        toolResult = await invoke<any[]>("search_in_files", {
+        toolResult = await invoke<unknown[]>("search_in_files", {
           options: functionArgs,
         });
         break;
@@ -88,13 +88,13 @@ export async function executeToolCall(
         break;
 
       case "fetch_webpage":
-        toolResult = await invoke<any>("fetch_webpage", {
+        toolResult = await invoke<unknown>("fetch_webpage", {
           options: functionArgs,
         });
         break;
 
       case "run_command":
-        toolResult = await invoke<any>("run_command", {
+        toolResult = await invoke<unknown>("run_command", {
           options: functionArgs,
         });
         break;

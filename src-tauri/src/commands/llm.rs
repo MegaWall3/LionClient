@@ -32,7 +32,7 @@ pub async fn call_llm_stream(
         window,
         message_id,
     );
-    
+                    
     // 运行 Agent 循环
     agent.run_stream(messages).await
 }

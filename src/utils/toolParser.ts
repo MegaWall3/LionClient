@@ -17,7 +17,7 @@ export function normalizeToolArgumentString(raw: string): string {
  * 解析工具参数，支持多层嵌套的 JSON 字符串
  * @throws {Error} 如果解析失败
  */
-export function parseToolArguments(raw: string): Record<string, any> {
+export function parseToolArguments(raw: string): Record<string, unknown> {
   let current = normalizeToolArgumentString(raw);
 
   for (let depth = 0; depth < 5; depth += 1) {
@@ -29,7 +29,7 @@ export function parseToolArguments(raw: string): Record<string, any> {
       }
 
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        return parsed as Record<string, any>;
+        return parsed as Record<string, unknown>;
       }
 
       throw new Error("工具参数必须是对象");
@@ -44,7 +44,7 @@ export function parseToolArguments(raw: string): Record<string, any> {
 /**
  * 获取工具参数预览，解析失败时返回原始字符串
  */
-export function getToolArgumentsPreview(raw: string): Record<string, any> | string {
+export function getToolArgumentsPreview(raw: string): Record<string, unknown> | string {
   try {
     return parseToolArguments(raw);
   } catch {

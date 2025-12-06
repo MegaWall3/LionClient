@@ -2,7 +2,6 @@ import { Bot, User } from "lucide-react";
 import type { RefObject } from "react";
 import ReactMarkdown from "react-markdown";
 import type { ChatMessage } from "../../types";
-import { cn } from "../../utils";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -16,7 +15,7 @@ export function MessageList({ messages, isThinking, messagesEndRef }: MessageLis
       {messages.map((msg) => (
         <div
           key={msg.id}
-          className={cn("flex gap-4", msg.role === "user" ? "justify-end" : "justify-start")}
+          className={`flex gap-4 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
         >
           {msg.role === "assistant" && (
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-400 flex items-center justify-center">
@@ -24,12 +23,11 @@ export function MessageList({ messages, isThinking, messagesEndRef }: MessageLis
             </div>
           )}
           <div
-            className={cn(
-              "max-w-[70%] rounded-2xl px-4 py-3",
+            className={`max-w-[70%] rounded-2xl px-4 py-3 ${
               msg.role === "user"
                 ? "bg-gradient-to-br from-emerald-500 to-cyan-500 text-white"
                 : "bg-white/10 text-slate-100"
-            )}
+            }`}
           >
             <div className="prose prose-invert prose-sm max-w-none">
               <ReactMarkdown>{msg.content}</ReactMarkdown>
@@ -44,19 +42,18 @@ export function MessageList({ messages, isThinking, messagesEndRef }: MessageLis
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-semibold text-emerald-300">{result.toolName}</span>
                       <span
-                        className={cn(
-                          "px-2 py-0.5 rounded-full text-[10px]",
+                        className={`px-2 py-0.5 rounded-full text-[10px] ${
                           result.status === "success"
                             ? "bg-emerald-500/20 text-emerald-300"
                             : result.status === "error"
                               ? "bg-rose-500/20 text-rose-300"
                               : "bg-amber-500/20 text-amber-300"
-                        )}
+                        }`}
                       >
                         {result.status}
                       </span>
                     </div>
-                    {result.result && (
+                    {result.result !== null && result.result !== undefined && (
                       <pre className="text-[11px] text-slate-400 whitespace-pre-wrap break-all">
                         {typeof result.result === "string"
                           ? result.result

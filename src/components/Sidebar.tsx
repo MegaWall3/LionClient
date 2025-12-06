@@ -1,6 +1,5 @@
 import { Plus, Sparkles } from "lucide-react";
 import { availableTools, quickActions } from "../constants";
-import { cn } from "../utils";
 
 interface SidebarProps {
   onNewChat: () => void;
@@ -70,10 +69,7 @@ export function Sidebar({ onNewChat }: SidebarProps) {
                 <tool.icon className="mb-3 h-5 w-5 text-white/80" />
                 <span>{tool.label}</span>
                 <div
-                  className={cn(
-                    "mt-3 h-1 w-full rounded-full bg-gradient-to-r to-transparent",
-                    tool.accent
-                  )}
+                  className={`mt-3 h-1 w-full rounded-full bg-gradient-to-r to-transparent ${tool.accent}`}
                 />
               </button>
             ))}

@@ -1,7 +1,6 @@
 import { ShieldCheck, Sparkles, TimerReset } from "lucide-react";
 import { statusBadges } from "../constants";
 import type { ToolTrace } from "../types";
-import { cn } from "../utils";
 
 interface ToolTracePanelProps {
   toolTrace: ToolTrace[];
@@ -25,10 +24,7 @@ export function ToolTracePanel({ toolTrace }: ToolTracePanelProps) {
             <div className="flex items-center justify-between text-xs text-slate-400">
               <span>{trace.startedAt}</span>
               <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
-                  statusBadges[trace.status]
-                )}
+                className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${statusBadges[trace.status]}`}
               >
                 {trace.status}
               </span>

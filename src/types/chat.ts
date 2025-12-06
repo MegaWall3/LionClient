@@ -3,8 +3,8 @@ export type ChatRole = "user" | "assistant" | "tool";
 export interface ToolCallResult {
   toolCallId: string;
   toolName: string;
-  arguments: Record<string, any> | string;
-  result: any;
+  arguments: Record<string, unknown> | string;
+  result: unknown;
   status: "pending" | "success" | "error";
 }
 

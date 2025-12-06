@@ -14,7 +14,7 @@ export function ChatContainerOriginal({
   messagesEndRef,
 }: ChatContainerOriginalProps) {
   return (
-    <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6 custom-scrollbar">
+    <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
       {messages.map((msg) => (
         <ChatMessage key={msg.id} message={msg} />
       ))}

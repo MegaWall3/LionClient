@@ -1,6 +1,6 @@
-import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { XCircle } from "lucide-react";
 import type { ChatMessage } from "../../types";
-import { cn } from "../../utils";
+import { ToolCallResultItem } from "./ToolCallResult";
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -12,19 +12,15 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
   return (
     <div
-      className={cn(
-        "group flex gap-3 px-4 py-3 hover:bg-gray-50/50 transition-colors",
-        isUser && "bg-blue-50/30"
-      )}
+      className={`group flex gap-3 px-4 py-3 hover:bg-gray-50/50 transition-colors ${isUser ? "bg-blue-50/30" : ""}`}
     >
       {/* 头像 */}
       <div
-        className={cn(
-          "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium",
+        className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
           isUser
             ? "bg-blue-500 text-white"
             : "bg-gradient-to-br from-purple-500 to-pink-500 text-white"
-        )}
+        }`}
       >
         {isUser ? "U" : "L"}
       </div>
@@ -44,10 +40,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
         {/* 消息文本 */}
         <div
-          className={cn(
-            "text-sm text-gray-800 whitespace-pre-wrap break-words",
-            isError && "text-red-600"
-          )}
+          className={`text-sm text-gray-800 whitespace-pre-wrap break-words ${isError ? "text-red-600" : ""}`}
         >
           {message.content}
         </div>
@@ -56,59 +49,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         {message.toolCallResults && message.toolCallResults.length > 0 && (
           <div className="mt-3 space-y-2">
             {message.toolCallResults.map((result) => (
-              <div
-                key={result.toolCallId}
-                className="bg-gray-50 rounded-lg p-3 border border-gray-200"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  {result.status === "pending" && (
-                    <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
-                  )}
-                  {result.status === "success" && (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  )}
-                  {result.status === "error" && <XCircle className="w-4 h-4 text-red-500" />}
-                  <span className="text-xs font-medium text-gray-700">
-                    执行工具调用: {result.toolName}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-xs px-2 py-0.5 rounded-full",
-                      result.status === "pending" && "bg-blue-100 text-blue-700",
-                      result.status === "success" && "bg-green-100 text-green-700",
-                      result.status === "error" && "bg-red-100 text-red-700"
-                    )}
-                  >
-                    {result.status === "pending"
-                      ? "执行中"
-                      : result.status === "success"
-                        ? "成功"
-                        : "失败"}
-                  </span>
-                </div>
-
-                {/* 参数 */}
-                {typeof result.arguments === "object" && (
-                  <div className="text-xs text-gray-600 mb-2">
-                    <span className="font-medium">参数:</span>
-                    <pre className="mt-1 bg-white p-2 rounded border border-gray-200 overflow-x-auto">
-                      {JSON.stringify(result.arguments, null, 2)}
-                    </pre>
-                  </div>
-                )}
-
-                {/* 结果 */}
-                {result.result && (
-                  <div className="text-xs text-gray-600">
-                    <span className="font-medium">结果:</span>
-                    <pre className="mt-1 bg-white p-2 rounded border border-gray-200 overflow-x-auto max-h-40">
-                      {typeof result.result === "string"
-                        ? result.result
-                        : JSON.stringify(result.result, null, 2)}
-                    </pre>
-                  </div>
-                )}
-              </div>
+              <ToolCallResultItem key={result.toolCallId} result={result} />
             ))}
           </div>
         )}
