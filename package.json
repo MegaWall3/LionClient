@@ -5,15 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsgo && vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write .",
-    "format": "biome format --write .",
-    "format:check": "biome format .",
-    "check": "biome check .",
-    "check:fix": "biome check --write ."
+    "tauri": "tauri"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -30,6 +24,7 @@
     "@tauri-apps/cli": "^2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "@typescript/native-preview": "7.0.0-dev.20251208.1",
     "@vitejs/plugin-react": "^4.6.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.15",

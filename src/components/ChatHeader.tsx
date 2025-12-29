@@ -8,12 +8,8 @@ export function ChatHeader() {
           <MessageSquare className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-sm uppercase tracking-wide text-slate-400">
-            当前会话
-          </p>
-          <p className="text-lg font-semibold">
-            Workspace 调度 · #1027
-          </p>
+          <p className="text-sm uppercase tracking-wide text-slate-400">当前会话</p>
+          <p className="text-lg font-semibold">Workspace 调度 · #1027</p>
         </div>
       </div>
       <div className="mt-4 flex items-center gap-3 text-xs text-slate-400 md:mt-0">
@@ -32,4 +28,3 @@ export function ChatHeader() {
     </header>
   );
 }
-

@@ -1,12 +1,6 @@
 import { useState } from "react";
 import type { ToolTrace } from "./types";
-import {
-  WindowControls,
-  Sidebar,
-  ChatHeader,
-  ChatFooter,
-  RightPanel,
-} from "./components";
+import { WindowControls, Sidebar, ChatHeader, ChatFooter, RightPanel } from "./components";
 import { ChatContainerOriginal, ChatInputStandalone } from "./components/Chat";
 import { useWindowControls, useAutoScroll, useFileList, useLLMStream } from "./hooks";
 
@@ -21,8 +15,7 @@ function App() {
   const { isMaximized, minimize, maximizeToggle, close } = useWindowControls();
 
   // LLM 流式对话
-  const { messages, isThinking, sendMessage, stopThinking, startNewChat } =
-    useLLMStream();
+  const { messages, isThinking, sendMessage, stopThinking, startNewChat } = useLLMStream();
 
   // 自动滚动
   const messagesEndRef = useAutoScroll(messages, isThinking);

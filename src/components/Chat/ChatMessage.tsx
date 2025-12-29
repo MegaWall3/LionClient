@@ -14,8 +14,8 @@ function ToolCallResult({
   const [isExpanded, setIsExpanded] = useState(toolCall.status === "pending");
   const resultStr =
     typeof toolCall.result === "string"
-    ? toolCall.result 
-    : JSON.stringify(toolCall.result, null, 2);
+      ? toolCall.result
+      : JSON.stringify(toolCall.result, null, 2);
 
   return (
     <div className="mt-2 rounded-xl border border-white/10 bg-white/5 p-3">
@@ -100,17 +100,17 @@ export function ChatMessage({ message }: ChatMessageProps) {
               …
             </div>
           )}
-        
+
         {/* 显示工具调用结果 */}
         {message.role === "assistant" &&
           message.toolCallResults &&
           message.toolCallResults.length > 0 && (
-          <div className="mt-3 space-y-2">
-            {message.toolCallResults.map((toolCall) => (
-              <ToolCallResult key={toolCall.toolCallId} toolCall={toolCall} />
-            ))}
-          </div>
-        )}
+            <div className="mt-3 space-y-2">
+              {message.toolCallResults.map((toolCall) => (
+                <ToolCallResult key={toolCall.toolCallId} toolCall={toolCall} />
+              ))}
+            </div>
+          )}
       </div>
       {message.status === "error" && <div className="mt-2 text-xs text-rose-400">错误</div>}
     </article>

@@ -20,7 +20,7 @@ pub async fn call_llm_stream(
     let api_key = std::env::var("SILICONFLOW_API_KEY")
         .unwrap_or_else(|_| "sk-zlrkdqipalbjrrgygpzvhgcfnebaealwfkfvpkcdrzpfycsi".to_string());
 
-    let model_name = model.unwrap_or_else(|| "Qwen/Qwen2.5-72B-Instruct".to_string());
+    let model_name = model.unwrap_or_else(|| "zai-org/GLM-4.5-Air".to_string());
     
     eprintln!("[LLM] 启动 Agent, model: {}", model_name);
     

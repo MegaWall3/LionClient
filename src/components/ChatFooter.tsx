@@ -19,14 +19,10 @@ export function ChatFooter() {
           命令模式
         </button>
       </div>
-      <button
-        type="button"
-        className="inline-flex items-center gap-1 text-emerald-300"
-      >
+      <button type="button" className="inline-flex items-center gap-1 text-emerald-300">
         <ArrowUpRight className="h-3 w-3" />
         预览执行计划
       </button>
     </div>
   );
 }
-
