@@ -24,4 +24,3 @@ pub struct SearchResult {
     pub line_content: String,
     pub match_index: usize,
 }
-

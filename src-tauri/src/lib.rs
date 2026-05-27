@@ -2,19 +2,8 @@ mod commands;
 mod types;
 
 use commands::{
-    call_llm_stream,
-    list_files,
-    read_file,
-    search_in_files,
-    delete_file,
-    rename_file,
-    copy_file,
-    write_file,
-    append_to_file,
-    replace_in_file,
-    download_file,
-    fetch_webpage,
-    run_command,
+    append_to_file, call_llm_stream, copy_file, delete_file, download_file, fetch_webpage,
+    list_files, read_file, rename_file, replace_in_file, run_command, search_in_files, write_file,
 };
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -43,9 +32,7 @@ pub fn run() {
             fetch_webpage,
             run_command,
         ])
-        .setup(|_app| {
-            Ok(())
-        })
+        .setup(|_app| Ok(()))
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

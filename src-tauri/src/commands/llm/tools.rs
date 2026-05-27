@@ -9,18 +9,16 @@ impl ToolRegistry {
         vec![
             // 核心工具：命令行优先
             Self::run_command_tool(),
-            
             // 文件系统工具（仅保留命令行不便的）
             Self::list_files_tool(),
             Self::read_file_tool(),
             Self::search_in_files_tool(),
             Self::write_file_tool(),
-            
             // 网络工具（仅保留结构化数据提取）
             Self::fetch_webpage_tool(),
         ]
     }
-    
+
     fn list_files_tool() -> FunctionObject {
         FunctionObjectArgs::default()
             .name("list_files")
@@ -50,7 +48,7 @@ impl ToolRegistry {
             .build()
             .unwrap()
     }
-    
+
     fn read_file_tool() -> FunctionObject {
         FunctionObjectArgs::default()
             .name("read_file")
@@ -66,7 +64,7 @@ impl ToolRegistry {
             .build()
             .unwrap()
     }
-    
+
     fn search_in_files_tool() -> FunctionObject {
         FunctionObjectArgs::default()
             .name("search_in_files")
@@ -82,7 +80,7 @@ impl ToolRegistry {
             .build()
             .unwrap()
     }
-    
+
     fn write_file_tool() -> FunctionObject {
         FunctionObjectArgs::default()
             .name("write_file")
@@ -98,7 +96,7 @@ impl ToolRegistry {
             .build()
             .unwrap()
     }
-    
+
     fn fetch_webpage_tool() -> FunctionObject {
         FunctionObjectArgs::default()
             .name("fetch_webpage")
@@ -115,7 +113,7 @@ impl ToolRegistry {
             .build()
             .unwrap()
     }
-    
+
     fn run_command_tool() -> FunctionObject {
         FunctionObjectArgs::default()
             .name("run_command")
@@ -142,4 +140,3 @@ impl ToolRegistry {
             .unwrap()
     }
 }
-

@@ -1,11 +1,11 @@
+use crate::types::{FileEntry, ListFilesOptions, SearchResult};
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use std::time::UNIX_EPOCH;
 use tauri::async_runtime::spawn_blocking;
-use walkdir::WalkDir;
 use trash;
-use crate::types::{ListFilesOptions, FileEntry, SearchResult};
+use walkdir::WalkDir;
 
 #[tauri::command]
 pub async fn list_files(options: ListFilesOptions) -> Result<Vec<FileEntry>, String> {
@@ -34,7 +34,7 @@ pub async fn list_files(options: ListFilesOptions) -> Result<Vec<FileEntry>, Str
             }
 
             let path = entry.path();
-            
+
             // 检查是否为隐藏文件（默认不包含）
             if !include_hidden {
                 let file_name = entry.file_name().to_string_lossy();
@@ -43,7 +43,7 @@ pub async fn list_files(options: ListFilesOptions) -> Result<Vec<FileEntry>, Str
                 if file_name.starts_with('.') {
                     continue;
                 }
-                
+
                 // Windows: 检查文件属性中的隐藏标志
                 #[cfg(windows)]
                 {
@@ -57,7 +57,7 @@ pub async fn list_files(options: ListFilesOptions) -> Result<Vec<FileEntry>, Str
                     }
                 }
             }
-            
+
             let display_path = path.to_string_lossy().to_string();
 
             if let Some(ref pat) = pattern {
@@ -116,7 +116,7 @@ pub struct ReadFileOptions {
 pub async fn read_file(options: ReadFileOptions) -> Result<String, String> {
     let task = spawn_blocking(move || {
         let path = PathBuf::from(&options.path);
-        
+
         if !path.exists() {
             return Err(format!("文件不存在: {}", options.path));
         }
@@ -126,9 +126,8 @@ pub async fn read_file(options: ReadFileOptions) -> Result<String, String> {
         }
 
         // 检查文件大小
-        let metadata = fs::metadata(&path)
-            .map_err(|e| format!("无法读取文件元数据: {}", e))?;
-        
+        let metadata = fs::metadata(&path).map_err(|e| format!("无法读取文件元数据: {}", e))?;
+
         let max_size = options.max_size.unwrap_or(10 * 1024 * 1024); // 默认 10MB
         if metadata.len() > max_size as u64 {
             return Err(format!(
@@ -139,9 +138,8 @@ pub async fn read_file(options: ReadFileOptions) -> Result<String, String> {
         }
 
         // 读取文件内容
-        let mut file = fs::File::open(&path)
-            .map_err(|e| format!("无法打开文件: {}", e))?;
-        
+        let mut file = fs::File::open(&path).map_err(|e| format!("无法打开文件: {}", e))?;
+
         let mut contents = String::new();
         file.read_to_string(&mut contents)
             .map_err(|e| format!("无法读取文件内容: {}", e))?;
@@ -172,7 +170,7 @@ pub async fn search_in_files(options: SearchInFilesOptions) -> Result<Vec<Search
         let recursive = options.recursive.unwrap_or(true);
         let case_sensitive = options.case_sensitive.unwrap_or(false);
         let file_pattern = options.file_pattern.clone();
-        
+
         let mut results = Vec::new();
         let search_pattern = if case_sensitive {
             options.pattern.clone()
@@ -184,7 +182,7 @@ pub async fn search_in_files(options: SearchInFilesOptions) -> Result<Vec<Search
 
         for entry in walker.into_iter().filter_map(Result::ok) {
             let path = entry.path();
-            
+
             // 跳过目录
             if !path.is_file() {
                 continue;
@@ -236,28 +234,27 @@ pub struct DeleteFileOptions {
 pub async fn delete_file(options: DeleteFileOptions) -> Result<String, String> {
     let task = spawn_blocking(move || {
         let path = PathBuf::from(&options.path);
-        
+
         if !path.exists() {
             return Err(format!("路径不存在: {}", options.path));
         }
 
         let permanent = options.permanent.unwrap_or(false);
-        
+
         if permanent {
             // 永久删除（不移动到回收站）
             if path.is_file() {
-                fs::remove_file(&path)
-                    .map_err(|e| format!("无法永久删除文件: {}", e))?;
+                fs::remove_file(&path).map_err(|e| format!("无法永久删除文件: {}", e))?;
                 Ok(format!("已永久删除文件: {}", options.path))
             } else if path.is_dir() {
                 let recursive = options.recursive.unwrap_or(false);
                 if recursive {
-                    fs::remove_dir_all(&path)
-                        .map_err(|e| format!("无法永久删除目录: {}", e))?;
+                    fs::remove_dir_all(&path).map_err(|e| format!("无法永久删除目录: {}", e))?;
                     Ok(format!("已永久删除目录（递归）: {}", options.path))
                 } else {
-                    fs::remove_dir(&path)
-                        .map_err(|e| format!("无法永久删除目录（目录不为空或需要递归删除）: {}", e))?;
+                    fs::remove_dir(&path).map_err(|e| {
+                        format!("无法永久删除目录（目录不为空或需要递归删除）: {}", e)
+                    })?;
                     Ok(format!("已永久删除目录: {}", options.path))
                 }
             } else {
@@ -265,8 +262,7 @@ pub async fn delete_file(options: DeleteFileOptions) -> Result<String, String> {
             }
         } else {
             // 移动到回收站（默认行为）
-            trash::delete(&path)
-                .map_err(|e| format!("无法移动到回收站: {}", e))?;
+            trash::delete(&path).map_err(|e| format!("无法移动到回收站: {}", e))?;
             let item_type = if path.is_file() { "文件" } else { "目录" };
             Ok(format!("已将{}移动到回收站: {}", item_type, options.path))
         }
@@ -286,21 +282,22 @@ pub async fn rename_file(options: RenameFileOptions) -> Result<String, String> {
     let task = spawn_blocking(move || {
         let old_path = PathBuf::from(&options.old_path);
         let new_path = PathBuf::from(&options.new_path);
-        
+
         if !old_path.exists() {
             return Err(format!("源文件不存在: {}", options.old_path));
         }
 
         // 确保目标目录存在
         if let Some(parent) = new_path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| format!("无法创建目标目录: {}", e))?;
+            fs::create_dir_all(parent).map_err(|e| format!("无法创建目标目录: {}", e))?;
         }
 
-        fs::rename(&old_path, &new_path)
-            .map_err(|e| format!("无法重命名/移动文件: {}", e))?;
+        fs::rename(&old_path, &new_path).map_err(|e| format!("无法重命名/移动文件: {}", e))?;
 
-        Ok(format!("已成功将 '{}' 重命名为/移动到 '{}'", options.old_path, options.new_path))
+        Ok(format!(
+            "已成功将 '{}' 重命名为/移动到 '{}'",
+            options.old_path, options.new_path
+        ))
     });
 
     task.await.map_err(|err| err.to_string())?
@@ -318,7 +315,7 @@ pub async fn copy_file(options: CopyFileOptions) -> Result<String, String> {
     let task = spawn_blocking(move || {
         let source = PathBuf::from(&options.source);
         let destination = PathBuf::from(&options.destination);
-        
+
         if !source.exists() {
             return Err(format!("源文件不存在: {}", options.source));
         }
@@ -330,21 +327,21 @@ pub async fn copy_file(options: CopyFileOptions) -> Result<String, String> {
 
         // 确保目标目录存在
         if let Some(parent) = destination.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| format!("无法创建目标目录: {}", e))?;
+            fs::create_dir_all(parent).map_err(|e| format!("无法创建目标目录: {}", e))?;
         }
 
         if source.is_file() {
-            fs::copy(&source, &destination)
-                .map_err(|e| format!("无法复制文件: {}", e))?;
+            fs::copy(&source, &destination).map_err(|e| format!("无法复制文件: {}", e))?;
         } else if source.is_dir() {
-            copy_dir_all(&source, &destination)
-                .map_err(|e| format!("无法复制目录: {}", e))?;
+            copy_dir_all(&source, &destination).map_err(|e| format!("无法复制目录: {}", e))?;
         } else {
             return Err(format!("未知的源路径类型: {}", options.source));
         }
 
-        Ok(format!("已成功复制 '{}' 到 '{}'", options.source, options.destination))
+        Ok(format!(
+            "已成功复制 '{}' 到 '{}'",
+            options.source, options.destination
+        ))
     });
 
     task.await.map_err(|err| err.to_string())?
@@ -356,7 +353,7 @@ fn copy_dir_all(src: &PathBuf, dst: &PathBuf) -> io::Result<()> {
         let entry = entry?;
         let path = entry.path();
         let dst_path = dst.join(entry.file_name());
-        
+
         if path.is_dir() {
             copy_dir_all(&path, &dst_path)?;
         } else {
@@ -376,16 +373,14 @@ pub struct WriteFileOptions {
 pub async fn write_file(options: WriteFileOptions) -> Result<String, String> {
     let task = spawn_blocking(move || {
         let path = PathBuf::from(&options.path);
-        
+
         // 确保目录存在
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| format!("无法创建目录: {}", e))?;
+            fs::create_dir_all(parent).map_err(|e| format!("无法创建目录: {}", e))?;
         }
 
         // 写入文件
-        fs::write(&path, &options.content)
-            .map_err(|e| format!("无法写入文件: {}", e))?;
+        fs::write(&path, &options.content).map_err(|e| format!("无法写入文件: {}", e))?;
 
         Ok(format!("已成功写入文件: {}", options.path))
     });
@@ -403,7 +398,7 @@ pub struct AppendToFileOptions {
 pub async fn append_to_file(options: AppendToFileOptions) -> Result<String, String> {
     let task = spawn_blocking(move || {
         let path = PathBuf::from(&options.path);
-        
+
         if !path.exists() {
             return Err(format!("文件不存在: {}", options.path));
         }
@@ -413,7 +408,7 @@ pub async fn append_to_file(options: AppendToFileOptions) -> Result<String, Stri
             .append(true)
             .open(&path)
             .map_err(|e| format!("无法打开文件: {}", e))?;
-        
+
         file.write_all(options.content.as_bytes())
             .map_err(|e| format!("无法追加内容: {}", e))?;
 
@@ -435,14 +430,13 @@ pub struct ReplaceInFileOptions {
 pub async fn replace_in_file(options: ReplaceInFileOptions) -> Result<String, String> {
     let task = spawn_blocking(move || {
         let path = PathBuf::from(&options.path);
-        
+
         if !path.exists() {
             return Err(format!("文件不存在: {}", options.path));
         }
 
         // 读取文件内容
-        let contents = fs::read_to_string(&path)
-            .map_err(|e| format!("无法读取文件: {}", e))?;
+        let contents = fs::read_to_string(&path).map_err(|e| format!("无法读取文件: {}", e))?;
 
         // 替换内容
         let use_regex = options.regex.unwrap_or(false);
@@ -458,10 +452,12 @@ pub async fn replace_in_file(options: ReplaceInFileOptions) -> Result<String, St
         };
 
         // 写回文件
-        fs::write(&path, &new_contents)
-            .map_err(|e| format!("无法写入文件: {}", e))?;
+        fs::write(&path, &new_contents).map_err(|e| format!("无法写入文件: {}", e))?;
 
-        Ok(format!("已在文件 '{}' 中替换 {} 处匹配", options.path, count))
+        Ok(format!(
+            "已在文件 '{}' 中替换 {} 处匹配",
+            options.path, count
+        ))
     });
 
     task.await.map_err(|err| err.to_string())?

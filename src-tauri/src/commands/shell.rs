@@ -1,6 +1,6 @@
+use crate::types::{RunCommandOptions, RunCommandResult};
 use std::process::Command;
 use tauri::async_runtime::spawn_blocking;
-use crate::types::{RunCommandOptions, RunCommandResult};
 
 #[tauri::command]
 pub async fn run_command(options: RunCommandOptions) -> Result<RunCommandResult, String> {
@@ -70,9 +70,7 @@ pub async fn run_command(options: RunCommandOptions) -> Result<RunCommandResult,
         }
 
         // 执行命令
-        let output = cmd
-            .output()
-            .map_err(|e| format!("执行命令失败: {}", e))?;
+        let output = cmd.output().map_err(|e| format!("执行命令失败: {}", e))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -91,4 +89,3 @@ pub async fn run_command(options: RunCommandOptions) -> Result<RunCommandResult,
     // 如果需要超时，可以使用 tokio::time::timeout 包装整个命令
     task.await.map_err(|err| err.to_string())?
 }
-

@@ -16,4 +16,3 @@ pub struct RunCommandResult {
     pub exit_code: i32,
     pub success: bool,
 }
-

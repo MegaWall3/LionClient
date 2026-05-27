@@ -18,27 +18,27 @@ impl SystemPromptBuilder {
         } else {
             "Unknown"
         };
-        
+
         let username = std::env::var("USERNAME")
             .or_else(|_| std::env::var("USER"))
             .unwrap_or_else(|_| "User".to_string());
-        
+
         let user_profile = std::env::var("USERPROFILE")
             .or_else(|_| std::env::var("HOME"))
             .unwrap_or_else(|_| "~".to_string());
-        
+
         let desktop_path = if cfg!(target_os = "windows") {
             format!("{}\\Desktop", user_profile)
         } else {
             format!("{}/Desktop", user_profile)
         };
-        
+
         let documents_path = if cfg!(target_os = "windows") {
             format!("{}\\Documents", user_profile)
         } else {
             format!("{}/Documents", user_profile)
         };
-        
+
         Self {
             os_info: os_info.to_string(),
             username,
@@ -47,7 +47,7 @@ impl SystemPromptBuilder {
             documents_path,
         }
     }
-    
+
     pub fn build(&self) -> String {
         // 获取系统架构信息
         let arch = if cfg!(target_pointer_width = "64") {
@@ -55,8 +55,9 @@ impl SystemPromptBuilder {
         } else {
             "32位"
         };
-        
-        format!(r#"你是 Lion，一个强大的桌面智能代理助手。你的职责是帮助用户完成各种电脑任务。
+
+        format!(
+            r#"你是 Lion，一个强大的桌面智能代理助手。你的职责是帮助用户完成各种电脑任务。
 
 【系统环境信息】
 - 操作系统: {} ({})
@@ -105,10 +106,15 @@ impl SystemPromptBuilder {
    - 发现问题立即修正，不要假装成功
 
 记住：你是一个可靠的助手，必须确保任务真正完成，而不是敷衍了事。"#,
-            self.os_info, arch, self.username, self.user_profile, 
-            self.desktop_path, self.documents_path,
-            self.desktop_path, self.documents_path, self.os_info
+            self.os_info,
+            arch,
+            self.username,
+            self.user_profile,
+            self.desktop_path,
+            self.documents_path,
+            self.desktop_path,
+            self.documents_path,
+            self.os_info
         )
     }
 }
-
