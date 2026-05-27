@@ -1,4 +1,4 @@
-import { Bot, ChevronDown, ChevronRight, Hourglass, TerminalSquare } from "lucide-react";
+import { Bot, ChevronDown, ChevronRight, TerminalSquare } from "lucide-react";
 import { useState } from "react";
 import type { ChatMessage as ChatMessageType } from "../../types";
 
@@ -11,24 +11,36 @@ function ToolCallResult({
 }: {
   toolCall: NonNullable<ChatMessageType["toolCallResults"]>[0];
 }) {
-  const [isExpanded, setIsExpanded] = useState(toolCall.status === "pending");
+  const [isExpanded, setIsExpanded] = useState(false);
   const resultStr =
     typeof toolCall.result === "string"
       ? toolCall.result
       : JSON.stringify(toolCall.result, null, 2);
+  const invocation = formatToolInvocation(toolCall);
 
   return (
-    <div className="mt-2 rounded-xl border border-white/10 bg-white/5 p-3">
+    <div className="mt-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex w-full items-center gap-2 text-left text-xs text-cyan-200 hover:text-cyan-100"
+        className="flex w-full items-center gap-2 text-left text-xs text-slate-300 hover:text-slate-100"
       >
         {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        <TerminalSquare className="h-3 w-3" />
-        <span className="font-medium">执行工具调用: {toolCall.toolName}</span>
+        <TerminalSquare className="h-3 w-3 text-cyan-300/80" />
         <span
-          className={`ml-auto rounded-full px-2 py-0.5 text-[10px] ${
+          className={`h-1.5 w-1.5 rounded-full ${
+            toolCall.status === "success"
+              ? "bg-emerald-300"
+              : toolCall.status === "error"
+                ? "bg-rose-300"
+                : "bg-amber-300 animate-pulse"
+          }`}
+        />
+        <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-slate-300">
+          {invocation}
+        </span>
+        <span
+          className={`rounded-full px-2 py-0.5 text-[10px] ${
             toolCall.status === "success"
               ? "bg-emerald-500/20 text-emerald-300"
               : toolCall.status === "error"
@@ -40,14 +52,9 @@ function ToolCallResult({
         </span>
       </button>
       {isExpanded && (
-        <div className="mt-2 rounded-lg bg-black/20 p-3">
-          <div className="mb-2 text-xs text-slate-400">参数:</div>
-          <pre className="mb-3 max-h-32 overflow-auto rounded bg-black/30 p-2 text-[10px] text-slate-300">
-            {JSON.stringify(toolCall.arguments, null, 2)}
-          </pre>
-          <div className="mb-2 text-xs text-slate-400">结果:</div>
-          <pre className="max-h-64 overflow-auto rounded bg-black/30 p-2 text-[10px] text-slate-300">
-            {resultStr}
+        <div className="mt-2 border-t border-white/10 pt-2">
+          <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed text-slate-300">
+            {toolCall.result === null || toolCall.result === undefined ? "等待结果..." : resultStr}
           </pre>
         </div>
       )}
@@ -55,9 +62,32 @@ function ToolCallResult({
   );
 }
 
+function formatToolInvocation(toolCall: NonNullable<ChatMessageType["toolCallResults"]>[0]) {
+  const args = toolCall.arguments;
+  if (typeof args === "string") {
+    return `${toolCall.toolName} ${args}`.trim();
+  }
+
+  if (args && typeof args === "object" && "command" in args && typeof args.command === "string") {
+    return `$ ${args.command}`;
+  }
+
+  if (!args || typeof args !== "object" || Object.keys(args).length === 0) {
+    return toolCall.toolName;
+  }
+
+  return `${toolCall.toolName} ${JSON.stringify(args)}`;
+}
+
 export function ChatMessage({ message }: ChatMessageProps) {
   // 不显示 tool 角色的消息
   if (message.role === "tool") {
+    return null;
+  }
+
+  const hasContent = message.content.trim().length > 0;
+  const hasToolResults = !!message.toolCallResults && message.toolCallResults.length > 0;
+  if (message.role === "assistant" && !hasContent && !hasToolResults && !message.status) {
     return null;
   }
 
@@ -84,33 +114,16 @@ export function ChatMessage({ message }: ChatMessageProps) {
         )}
       </div>
       <div className="prose prose-invert max-w-none text-sm">
-        <p className="whitespace-pre-wrap break-words">
-          {message.content || "正在思考下一步计划…"}
-        </p>
-
-        {message.role === "assistant" &&
-          message.toolCallResults?.some((toolCall) => toolCall.status === "pending") && (
-            <div className="mt-2 flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-200">
-              <Hourglass className="h-3 w-3 animate-pulse" />
-              正在执行{" "}
-              {message.toolCallResults
-                .filter((toolCall) => toolCall.status === "pending")
-                .map((toolCall) => toolCall.toolName)
-                .join("，")}
-              …
-            </div>
-          )}
+        {hasContent && <p className="whitespace-pre-wrap break-words">{message.content}</p>}
 
         {/* 显示工具调用结果 */}
-        {message.role === "assistant" &&
-          message.toolCallResults &&
-          message.toolCallResults.length > 0 && (
-            <div className="mt-3 space-y-2">
-              {message.toolCallResults.map((toolCall) => (
-                <ToolCallResult key={toolCall.toolCallId} toolCall={toolCall} />
-              ))}
-            </div>
-          )}
+        {message.role === "assistant" && hasToolResults && (
+          <div className="mt-3 space-y-2">
+            {message.toolCallResults?.map((toolCall) => (
+              <ToolCallResult key={toolCall.toolCallId} toolCall={toolCall} />
+            ))}
+          </div>
+        )}
       </div>
       {message.status === "error" && <div className="mt-2 text-xs text-rose-400">错误</div>}
     </article>

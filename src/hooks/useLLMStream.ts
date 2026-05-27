@@ -1,11 +1,21 @@
-import { useState, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { useMemo, useState } from "react";
+import { DEFAULT_MODEL } from "../constants";
 import type { ChatMessage } from "../types";
 import { formatTimestamp } from "../utils";
-import { parseToolArguments, getToolArgumentsPreview } from "../utils/toolParser";
-import { executeToolCall } from "../services/toolExecutor";
-import { DEFAULT_MODEL } from "../constants";
+import { getToolArgumentsPreview } from "../utils/toolParser";
+
+type StreamMessage = {
+  role: "user" | "assistant" | "system" | "tool";
+  content: string;
+  tool_calls?: Array<{
+    id: string;
+    type: string;
+    function: { name: string; arguments: string };
+  }>;
+  tool_call_id?: string;
+};
 
 // 事件类型定义
 type ChunkEvent = {
@@ -24,6 +34,21 @@ type ToolCallsEvent = {
   content: string;
 };
 
+type ToolStartEvent = {
+  message_id: string;
+  tool_id: string;
+  tool_name: string;
+  arguments: Record<string, unknown>;
+};
+
+type ToolDoneEvent = {
+  message_id: string;
+  tool_id: string;
+  tool_name: string;
+  result: unknown;
+  status?: "success" | "error";
+};
+
 // 初始消息
 const initialMessages: ChatMessage[] = [
   {
@@ -40,6 +65,27 @@ export function useLLMStream() {
   const [isThinking, setIsThinking] = useState(false);
   const [activeUnlisteners, setActiveUnlisteners] = useState<Map<string, UnlistenFn[]>>(new Map());
 
+  function clearActiveStreams(markInterrupted = false) {
+    activeUnlisteners.forEach((unlisteners) => {
+      for (const unlisten of unlisteners) {
+        unlisten();
+      }
+    });
+    const activeIds = new Set(activeUnlisteners.keys());
+    setActiveUnlisteners(new Map());
+    setIsThinking(false);
+
+    if (markInterrupted && activeIds.size > 0) {
+      setMessages((prev) =>
+        prev.map((msg) =>
+          activeIds.has(msg.id) && msg.role === "assistant" && !msg.content.trim()
+            ? { ...msg, content: "[已打断]", status: "error" as const }
+            : msg
+        )
+      );
+    }
+  }
+
   // 组合消息（只保留 user 和 assistant）
   const composedMessages = useMemo(
     () =>
@@ -54,39 +100,21 @@ export function useLLMStream() {
 
   // 新建对话
   function startNewChat() {
+    clearActiveStreams();
     setMessages(initialMessages);
-    setActiveUnlisteners(new Map());
-    setIsThinking(false);
   }
 
   // 停止当前流式输出
   function stopThinking() {
-    // 清理所有活动的监听器
-    activeUnlisteners.forEach((unlisteners) => {
-      for (const unlisten of unlisteners) {
-        unlisten();
-      }
-    });
-    setActiveUnlisteners(new Map());
-    setIsThinking(false);
-
-    // 更新最后一条 assistant 消息，标记为已停止
-    setMessages((prev) => {
-      const lastAssistant = [...prev].reverse().find((msg) => msg.role === "assistant");
-      if (lastAssistant && !lastAssistant.content.trim()) {
-        return prev.map((msg) =>
-          msg.id === lastAssistant.id
-            ? { ...msg, content: "[已停止]", status: "error" as const }
-            : msg
-        );
-      }
-      return prev;
-    });
+    clearActiveStreams(true);
   }
 
   // 发送消息
   async function sendMessage(userInput: string) {
     if (!userInput.trim()) return;
+    if (isThinking || activeUnlisteners.size > 0) {
+      clearActiveStreams(true);
+    }
 
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
@@ -111,13 +139,10 @@ export function useLLMStream() {
     // 在 try 块外声明变量，以便在 catch 块中也能访问
     let unlistenChunk: UnlistenFn | undefined;
     let unlistenToolCalls: UnlistenFn | undefined;
+    let unlistenToolStart: UnlistenFn | undefined;
+    let unlistenToolDone: UnlistenFn | undefined;
     let unlistenDone: UnlistenFn | undefined;
-    let messagesToSend: Array<{
-      role: "user" | "assistant" | "system" | "tool";
-      content: string;
-      tool_calls?: any;
-      tool_call_id?: string;
-    }>;
+    let messagesToSend: StreamMessage[];
 
     try {
       // 构建消息列表
@@ -134,22 +159,18 @@ export function useLLMStream() {
         }
       });
 
-      // 监听 tool_calls 事件
-      unlistenToolCalls = await listen<ToolCallsEvent>("llm-stream-tool-calls", async (event) => {
+      // 监听工具调用计划。工具由 Rust Agent 执行，前端只负责展示状态。
+      unlistenToolCalls = await listen<ToolCallsEvent>("llm-stream-tool-calls", (event) => {
         if (event.payload.message_id === assistantMsgId) {
-          // 取消之前的监听器，避免冲突
-          if (unlistenChunk) unlistenChunk();
-          if (unlistenToolCalls) unlistenToolCalls();
           const toolCalls = event.payload.tool_calls;
           console.log("[前端] 收到 tool_calls: ", toolCalls);
 
-          // 先更新 assistant 消息，显示正在执行工具调用
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === assistantMsgId
                 ? {
                     ...msg,
-                    content: "正在思考下一步计划…",
+                    content: event.payload.content || msg.content,
                     tool_calls: toolCalls.map((tc) => ({
                       id: tc.id,
                       type: tc.type,
@@ -169,305 +190,69 @@ export function useLLMStream() {
                 : msg
             )
           );
+        }
+      });
 
-          for (const toolCall of toolCalls) {
-            const functionName = toolCall.function.name;
-            let functionArgs: Record<string, any>;
-            try {
-              functionArgs = parseToolArguments(toolCall.function.arguments);
-            } catch (error) {
-              setMessages((prev) =>
-                prev.map((msg) => {
-                  if (msg.id === assistantMsgId && msg.toolCallResults) {
-                    return {
-                      ...msg,
-                      toolCallResults: msg.toolCallResults.map((result) =>
-                        result.toolCallId === toolCall.id
-                          ? {
-                              ...result,
-                              result: (error as Error).message ?? "工具参数解析失败",
-                              status: "error" as const,
-                            }
-                          : result
-                      ),
-                    };
-                  }
-                  return msg;
-                })
+      unlistenToolStart = await listen<ToolStartEvent>("llm-tool-start", (event) => {
+        if (event.payload.message_id === assistantMsgId) {
+          setMessages((prev) =>
+            prev.map((msg) => {
+              if (msg.id !== assistantMsgId) return msg;
+
+              const existingResults = msg.toolCallResults || [];
+              const resultIndex = existingResults.findIndex(
+                (result) => result.toolCallId === event.payload.tool_id
               );
-              continue;
-            }
-
-            try {
-              // 使用 toolExecutor 执行工具调用
-              const { result: toolResult, status: toolStatus } = await executeToolCall(
-                functionName,
-                functionArgs
-              );
-
-              // 更新 assistant 消息，添加工具调用结果
-              setMessages((prev) =>
-                prev.map((msg) => {
-                  if (msg.id === assistantMsgId) {
-                    const existingResults = msg.toolCallResults || [];
-                    const resultIndex = existingResults.findIndex(
-                      (r) => r.toolCallId === toolCall.id
-                    );
-                    const newResult = {
-                      toolCallId: toolCall.id,
-                      toolName: functionName,
-                      arguments: functionArgs,
-                      result: toolResult,
-                      status: toolStatus as "pending" | "success" | "error",
-                    };
-                    const updatedResults =
-                      resultIndex >= 0
-                        ? existingResults.map((result, index) =>
-                            index === resultIndex ? newResult : result
-                          )
-                        : [...existingResults, newResult];
-
-                    return {
-                      ...msg,
-                      content: event.payload.content || "正在思考下一步计划…",
-                      tool_calls: toolCalls.map((tc) => ({
-                        id: tc.id,
-                        type: tc.type,
-                        function: {
-                          name: tc.function.name,
-                          arguments: tc.function.arguments,
-                        },
-                      })),
-                      toolCallResults: updatedResults,
-                    };
-                  }
-                  return msg;
-                })
-              );
-
-              // 继续对话，将 tool 结果发送给 LLM
-              const continueMessages = [
-                ...composedMessages,
-                { role: "user" as const, content: userMsg.content },
-                {
-                  role: "assistant" as const,
-                  content: event.payload.content,
-                  tool_calls: toolCalls.map((tc) => ({
-                    id: tc.id,
-                    type: tc.type,
-                    function: {
-                      name: tc.function.name,
-                      arguments: tc.function.arguments,
-                    },
-                  })),
-                },
-                {
-                  role: "tool" as const,
-                  content: JSON.stringify(toolResult),
-                  tool_call_id: toolCall.id,
-                },
-              ];
-
-              // 创建新的 assistant 消息用于接收继续对话的流式输出
-              const continueMsgId = crypto.randomUUID();
-              const continueAssistantMsg: ChatMessage = {
-                id: continueMsgId,
-                role: "assistant",
-                content: "",
-                timestamp: formatTimestamp(),
+              const newResult = {
+                toolCallId: event.payload.tool_id,
+                toolName: event.payload.tool_name,
+                arguments: event.payload.arguments,
+                result: null,
+                status: "pending" as const,
               };
-              setMessages((prev) => [...prev, continueAssistantMsg]);
+              const toolCallResults =
+                resultIndex >= 0
+                  ? existingResults.map((result, index) =>
+                      index === resultIndex ? { ...result, ...newResult } : result
+                    )
+                  : [...existingResults, newResult];
 
-              // 为继续对话设置监听器
-              const unlistenContinueChunk = await listen<ChunkEvent>(
-                "llm-stream-chunk",
-                (chunkEvent) => {
-                  if (chunkEvent.payload.message_id === continueMsgId) {
-                    setMessages((prev) =>
-                      prev.map((msg) =>
-                        msg.id === continueMsgId
-                          ? {
-                              ...msg,
-                              content: chunkEvent.payload.full_content,
-                            }
-                          : msg
-                      )
-                    );
-                  }
-                }
+              return {
+                ...msg,
+                toolCallResults,
+              };
+            })
+          );
+        }
+      });
+
+      unlistenToolDone = await listen<ToolDoneEvent>("llm-tool-done", (event) => {
+        if (event.payload.message_id === assistantMsgId) {
+          setMessages((prev) =>
+            prev.map((msg) => {
+              if (msg.id !== assistantMsgId) return msg;
+
+              const existingResults = msg.toolCallResults || [];
+              const resultIndex = existingResults.findIndex(
+                (result) => result.toolCallId === event.payload.tool_id
               );
+              const newResult = {
+                toolCallId: event.payload.tool_id,
+                toolName: event.payload.tool_name,
+                arguments: resultIndex >= 0 ? existingResults[resultIndex].arguments : {},
+                result: event.payload.result,
+                status: event.payload.status ?? "success",
+              };
+              const toolCallResults =
+                resultIndex >= 0
+                  ? existingResults.map((result, index) =>
+                      index === resultIndex ? { ...result, ...newResult } : result
+                    )
+                  : [...existingResults, newResult];
 
-              // 保存继续对话的监听器
-              setActiveUnlisteners((prev) => {
-                const next = new Map(prev);
-                const existing = next.get(continueMsgId) || [];
-                next.set(continueMsgId, [...existing, unlistenContinueChunk]);
-                return next;
-              });
-
-              const unlistenContinueToolCalls = await listen<ToolCallsEvent>(
-                "llm-stream-tool-calls",
-                async (toolEvent) => {
-                  if (toolEvent.payload.message_id === continueMsgId) {
-                    // 递归处理 tool_calls（支持多轮 toolcall）
-                    const continueToolCalls = toolEvent.payload.tool_calls;
-                    console.log("[前端] 继续对话收到 tool_calls: ", continueToolCalls);
-
-                    for (const continueToolCall of continueToolCalls) {
-                      const continueFunctionName = continueToolCall.function.name;
-                      const continueFunctionArgs = parseToolArguments(
-                        continueToolCall.function.arguments
-                      );
-
-                      // 使用 toolExecutor 执行工具调用
-                      const { result: continueToolResult } = await executeToolCall(
-                        continueFunctionName,
-                        continueFunctionArgs
-                      );
-
-                      // 更新 continueMsgId 的 assistant 消息，添加工具调用结果
-                      setMessages((prev) =>
-                        prev.map((msg) => {
-                          if (msg.id === continueMsgId) {
-                            const existingResults = msg.toolCallResults || [];
-                            const newResult = {
-                              toolCallId: continueToolCall.id,
-                              toolName: continueFunctionName,
-                              arguments: continueFunctionArgs,
-                              result: continueToolResult,
-                              status: "success" as const,
-                            };
-                            return {
-                              ...msg,
-                              toolCallResults: [...existingResults, newResult],
-                            };
-                          }
-                          return msg;
-                        })
-                      );
-
-                      // 继续下一轮对话
-                      const nextMessages = [
-                        ...continueMessages,
-                        {
-                          role: "assistant" as const,
-                          content: toolEvent.payload.content,
-                          tool_calls: continueToolCalls.map((tc) => ({
-                            id: tc.id,
-                            type: tc.type,
-                            function: {
-                              name: tc.function.name,
-                              arguments: tc.function.arguments,
-                            },
-                          })),
-                        },
-                        {
-                          role: "tool" as const,
-                          content: JSON.stringify(continueToolResult),
-                          tool_call_id: continueToolCall.id,
-                        },
-                      ];
-
-                      const nextMsgId = crypto.randomUUID();
-                      const nextAssistantMsg: ChatMessage = {
-                        id: nextMsgId,
-                        role: "assistant",
-                        content: "",
-                        timestamp: formatTimestamp(),
-                      };
-                      setMessages((prev) => [...prev, nextAssistantMsg]);
-
-                      // 设置下一轮的监听器
-                      const unlistenNextChunk = await listen<ChunkEvent>(
-                        "llm-stream-chunk",
-                        (nextChunkEvent) => {
-                          if (nextChunkEvent.payload.message_id === nextMsgId) {
-                            setMessages((prev) =>
-                              prev.map((msg) =>
-                                msg.id === nextMsgId
-                                  ? {
-                                      ...msg,
-                                      content: nextChunkEvent.payload.full_content,
-                                    }
-                                  : msg
-                              )
-                            );
-                          }
-                        }
-                      );
-
-                      const unlistenNextDone = await listen<string>(
-                        "llm-stream-done",
-                        (nextDoneEvent) => {
-                          if (nextDoneEvent.payload === nextMsgId) {
-                            setIsThinking(false);
-                            unlistenNextChunk();
-                            unlistenNextDone();
-                            setActiveUnlisteners((prev) => {
-                              const next = new Map(prev);
-                              next.delete(nextMsgId);
-                              return next;
-                            });
-                          }
-                        }
-                      );
-
-                      // 保存下一轮对话的监听器
-                      setActiveUnlisteners((prev) => {
-                        const next = new Map(prev);
-                        next.set(nextMsgId, [unlistenNextChunk, unlistenNextDone]);
-                        return next;
-                      });
-
-                      await invoke("call_llm_stream", {
-                        messages: nextMessages,
-                        messageId: nextMsgId,
-                        model: DEFAULT_MODEL,
-                      });
-                    }
-                  }
-                }
-              );
-
-              const unlistenContinueDone = await listen<string>(
-                "llm-stream-done",
-                (continueDoneEvent) => {
-                  if (continueDoneEvent.payload === continueMsgId) {
-                    setIsThinking(false);
-                    unlistenContinueChunk();
-                    unlistenContinueToolCalls();
-                    unlistenContinueDone();
-                    setActiveUnlisteners((prev) => {
-                      const next = new Map(prev);
-                      next.delete(continueMsgId);
-                      return next;
-                    });
-                  }
-                }
-              );
-
-              // 更新继续对话的监听器列表
-              setActiveUnlisteners((prev) => {
-                const next = new Map(prev);
-                const existing = next.get(continueMsgId) || [];
-                next.set(continueMsgId, [
-                  ...existing,
-                  unlistenContinueToolCalls,
-                  unlistenContinueDone,
-                ]);
-                return next;
-              });
-
-              // 继续调用 LLM
-              await invoke("call_llm_stream", {
-                messages: continueMessages,
-                messageId: continueMsgId,
-                model: DEFAULT_MODEL,
-              });
-            } catch (error) {
-              console.error("[ToolCall Error]", error);
-            }
-          }
+              return { ...msg, toolCallResults };
+            })
+          );
         }
       });
 
@@ -476,6 +261,8 @@ export function useLLMStream() {
           setIsThinking(false);
           if (unlistenChunk) unlistenChunk();
           if (unlistenToolCalls) unlistenToolCalls();
+          if (unlistenToolStart) unlistenToolStart();
+          if (unlistenToolDone) unlistenToolDone();
           if (unlistenDone) unlistenDone();
           setActiveUnlisteners((prev) => {
             const next = new Map(prev);
@@ -486,9 +273,13 @@ export function useLLMStream() {
       });
 
       // 保存监听器到活动列表
-      const unlisteners = [unlistenChunk, unlistenToolCalls, unlistenDone].filter(
-        (u): u is UnlistenFn => u !== undefined
-      );
+      const unlisteners = [
+        unlistenChunk,
+        unlistenToolCalls,
+        unlistenToolStart,
+        unlistenToolDone,
+        unlistenDone,
+      ].filter((u): u is UnlistenFn => u !== undefined);
       setActiveUnlisteners((prev) => {
         const next = new Map(prev);
         next.set(assistantMsgId, unlisteners);

@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { ToolTrace } from "./types";
-import { WindowControls, Sidebar, ChatHeader, ChatFooter, RightPanel } from "./components";
+import { ChatFooter, ChatHeader, RightPanel, Sidebar, WindowControls } from "./components";
 import { ChatContainerOriginal, ChatInputStandalone } from "./components/Chat";
-import { useWindowControls, useAutoScroll, useFileList, useLLMStream } from "./hooks";
+import { useAutoScroll, useFileList, useLLMStream, useWindowControls } from "./hooks";
+import type { ToolTrace } from "./types";
 
 // 初始工具轨迹：空数组，不显示预置数据
 const initialTrace: ToolTrace[] = [];
@@ -37,7 +37,7 @@ function App() {
 
   // 发送消息
   const handleSend = () => {
-    if (!input.trim() || isThinking) return;
+    if (!input.trim()) return;
     sendMessage(input);
     setInput("");
   };

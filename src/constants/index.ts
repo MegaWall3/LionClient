@@ -33,4 +33,4 @@ export const statusBadges: Record<ToolTrace["status"], string> = {
 /**
  * 默认 LLM 模型
  */
-export const DEFAULT_MODEL = "zai-org/GLM-4.5-Air";
+export const DEFAULT_MODEL = "deepseek-ai/DeepSeek-V3.2";

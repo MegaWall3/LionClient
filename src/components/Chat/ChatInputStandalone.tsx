@@ -19,7 +19,7 @@ export function ChatInputStandalone({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (!isThinking && value.trim()) {
+      if (value.trim()) {
         onSend();
       }
     }
@@ -34,29 +34,27 @@ export function ChatInputStandalone({
           onKeyDown={handleKeyDown}
           placeholder="输入你的指令..."
           rows={3}
-          disabled={isThinking}
-          className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/50 disabled:opacity-50 resize-none"
+          className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/50 resize-none"
         />
-        {isThinking ? (
+        {isThinking && (
           <button
             type="button"
             onClick={onStop}
-            className="flex-shrink-0 rounded-2xl bg-rose-500/90 p-3 text-white transition hover:bg-rose-500"
+            className="flex-shrink-0 rounded-2xl border border-white/10 bg-white/5 p-3 text-white/70 transition hover:bg-white/10 hover:text-white"
             title="停止生成"
           >
             <Square className="h-5 w-5" />
           </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onSend}
-            disabled={!value.trim()}
-            className="flex-shrink-0 rounded-2xl bg-emerald-500/90 p-3 text-white transition hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="发送"
-          >
-            <Send className="h-5 w-5" />
-          </button>
         )}
+        <button
+          type="button"
+          onClick={onSend}
+          disabled={!value.trim()}
+          className="flex-shrink-0 rounded-2xl bg-emerald-500/90 p-3 text-white transition hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          title={isThinking ? "发送并打断当前回复" : "发送"}
+        >
+          <Send className="h-5 w-5" />
+        </button>
       </div>
     </div>
   );
