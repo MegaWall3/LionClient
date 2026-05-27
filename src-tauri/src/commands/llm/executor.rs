@@ -4,6 +4,8 @@ use crate::types::{ListFilesOptions, RunCommandOptions};
 use serde_json::Value;
 use tauri::Window;
 
+use super::runtime::ToolInvocation;
+
 // 直接从 files 模块导入 Options 结构体
 // 注意：这些结构体在 files.rs 中定义，但没有通过 mod.rs 重新导出
 // 我们需要在这里重新定义或者修改 files.rs 的可见性
@@ -16,30 +18,26 @@ pub struct ToolExecutor;
 
 impl ToolExecutor {
     /// 执行单个工具调用
-    pub async fn execute(
-        _window: &Window,
-        tool_name: &str,
-        arguments: Value,
-    ) -> Result<String, String> {
+    pub async fn execute(_window: &Window, invocation: &ToolInvocation) -> Result<String, String> {
         eprintln!(
             "[ToolExecutor] 执行工具: {} with args: {}",
-            tool_name, arguments
+            invocation.name, invocation.arguments
         );
 
-        match tool_name {
+        match invocation.name.as_str() {
             // 核心工具
-            "run_command" => Self::exec_run_command(arguments).await,
+            "run_command" => Self::exec_run_command(invocation.arguments.clone()).await,
 
             // 文件系统工具
-            "list_files" => Self::exec_list_files(arguments).await,
-            "read_file" => Self::exec_read_file(arguments).await,
-            "search_in_files" => Self::exec_search_in_files(arguments).await,
-            "write_file" => Self::exec_write_file(arguments).await,
+            "list_files" => Self::exec_list_files(invocation.arguments.clone()).await,
+            "read_file" => Self::exec_read_file(invocation.arguments.clone()).await,
+            "search_in_files" => Self::exec_search_in_files(invocation.arguments.clone()).await,
+            "write_file" => Self::exec_write_file(invocation.arguments.clone()).await,
 
             // 网络工具
-            "fetch_webpage" => Self::exec_fetch_webpage(arguments).await,
+            "fetch_webpage" => Self::exec_fetch_webpage(invocation.arguments.clone()).await,
 
-            _ => Err(format!("未知工具: {}。提示：文件下载请使用 run_command 执行 PowerShell 的 Invoke-WebRequest", tool_name)),
+            _ => Err(format!("未知工具: {}。提示：文件下载请使用 run_command 执行 PowerShell 的 Invoke-WebRequest", invocation.name)),
         }
     }
 

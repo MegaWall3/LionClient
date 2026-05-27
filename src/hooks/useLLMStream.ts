@@ -293,7 +293,8 @@ export function useLLMStream() {
         model: DEFAULT_MODEL,
       });
     } catch (error) {
-      const errorDetails = (error as { message?: string })?.message ?? String(error);
+      const errorDetails =
+        error instanceof Error ? error.message : typeof error === "string" ? error : String(error);
       console.error("[LLM Error] 详细错误信息:", {
         error,
         message: errorDetails,
@@ -306,8 +307,7 @@ export function useLLMStream() {
           msg.id === assistantMsgId
             ? {
                 ...msg,
-                content:
-                  "无法连接到 LLM 服务，请检查网络或 API Key 配置。你也可以先让我执行本地的工具操作。",
+                content: `无法连接到 LLM 服务：${errorDetails}\n\n你也可以先让我执行本地的工具操作。`,
                 status: "error",
               }
             : msg
