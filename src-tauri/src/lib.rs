@@ -3,7 +3,8 @@ mod types;
 
 use commands::{
     append_to_file, call_llm_stream, copy_file, delete_file, download_file, fetch_webpage,
-    list_files, read_file, rename_file, replace_in_file, run_command, search_in_files, write_file,
+    list_files, read_file, rename_file, replace_in_file, resolve_llm_approval, run_command,
+    search_in_files, write_file,
 };
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -19,6 +20,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             call_llm_stream,
+            resolve_llm_approval,
             list_files,
             read_file,
             search_in_files,

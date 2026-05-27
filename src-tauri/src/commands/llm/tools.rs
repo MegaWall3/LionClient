@@ -40,7 +40,7 @@ impl ToolRegistry {
                 name: "run_command",
                 category: "shell",
                 risk: "high",
-                description: "执行系统命令。适合系统查询、开发环境检查和用户明确要求的自动化；写入、删除、安装、联网下载等高风险操作必须先解释计划并等待用户确认。",
+                description: "执行系统命令。适合系统查询、开发环境检查和用户明确要求的自动化；写入、删除、安装、联网下载等高风险命令会由 runtime 弹出结构化确认按钮。",
                 parameters: json!({
                     "type": "object",
                     "properties": {

@@ -45,7 +45,7 @@ export function InstantToolPanel({
           value={listPath}
           onChange={(e) => onPathChange(e.target.value)}
           className="w-full rounded-2xl border border-white/10 bg-transparent px-3 py-2 text-xs text-white placeholder:text-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/50"
-          placeholder="例如 D:\\Workspace"
+          placeholder="例如 /Users/you/Projects 或 C:\\Users\\you\\Projects"
         />
         <input
           value={listPattern}

@@ -1,3 +1,4 @@
+export * from "./ApprovalBanner";
 export * from "./Chat";
 export * from "./InstantToolPanel";
 export * from "./Sidebar";

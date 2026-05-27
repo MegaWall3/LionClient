@@ -250,17 +250,17 @@ impl Agent {
 
         events.tool_start(invocation)?;
 
-        let (tool_result, tool_status) = match ToolExecutor::execute(&self.window, invocation).await
-        {
-            Ok(result) => {
-                eprintln!("[Agent] ✅ 工具 {} 执行成功", invocation.name);
-                (result, "success")
-            }
-            Err(e) => {
-                eprintln!("[Agent] ❌ 工具 {} 执行失败: {}", invocation.name, e);
-                (format!("工具执行错误: {}", e), "error")
-            }
-        };
+        let (tool_result, tool_status) =
+            match ToolExecutor::execute(&self.window, &self.message_id, invocation).await {
+                Ok(result) => {
+                    eprintln!("[Agent] ✅ 工具 {} 执行成功", invocation.name);
+                    (result, "success")
+                }
+                Err(e) => {
+                    eprintln!("[Agent] ❌ 工具 {} 执行失败: {}", invocation.name, e);
+                    (format!("工具执行错误: {}", e), "error")
+                }
+            };
 
         events.tool_done(invocation, &tool_result, tool_status)?;
         let result_preview = tool_result.chars().take(200).collect::<String>();

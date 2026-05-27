@@ -26,7 +26,17 @@ export interface ToolCallResult {
   toolName: string;
   arguments: Record<string, unknown> | string;
   result: unknown;
-  status: "pending" | "success" | "error";
+  status: "pending" | "waiting_approval" | "success" | "error";
+}
+
+export interface ApprovalRequest {
+  request_id: string;
+  message_id: string;
+  tool_id: string;
+  tool_name: string;
+  risk: string;
+  summary: string;
+  arguments: Record<string, unknown>;
 }
 
 // 工具轨迹

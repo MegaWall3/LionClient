@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { ChatFooter, ChatHeader, RightPanel, Sidebar, WindowControls } from "./components";
+import {
+  ApprovalBanner,
+  ChatFooter,
+  ChatHeader,
+  RightPanel,
+  Sidebar,
+  WindowControls,
+} from "./components";
 import { ChatContainerOriginal, ChatInputStandalone } from "./components/Chat";
 import { useAutoScroll, useFileList, useLLMStream, useWindowControls } from "./hooks";
 import type { ToolTrace } from "./types";
@@ -15,7 +22,15 @@ function App() {
   const { isMaximized, minimize, maximizeToggle, close } = useWindowControls();
 
   // LLM 流式对话
-  const { messages, isThinking, sendMessage, stopThinking, startNewChat } = useLLMStream();
+  const {
+    messages,
+    isThinking,
+    sendMessage,
+    stopThinking,
+    startNewChat,
+    approvalRequest,
+    resolveApproval,
+  } = useLLMStream();
 
   // 自动滚动
   const messagesEndRef = useAutoScroll(messages, isThinking);
@@ -88,6 +103,11 @@ function App() {
                   onSend={handleSend}
                   onStop={handleStop}
                   isThinking={isThinking}
+                />
+
+                <ApprovalBanner
+                  request={approvalRequest}
+                  onResolve={(approved) => void resolveApproval(approved)}
                 />
 
                 {/* 聊天底部工具栏 */}

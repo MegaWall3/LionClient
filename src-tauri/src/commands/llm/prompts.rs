@@ -76,7 +76,7 @@ impl SystemPromptBuilder {
 【能力模型】
 - 当前内置工具是 local tools；未来会扩展为 MCP servers 和 skills。
 - 工具描述里的 category/risk 是安全提示：read 低风险，write/shell/network 高风险。
-- 对删除、覆盖、安装、联网下载、修改系统设置等高风险操作，必须先给出操作计划并请求用户确认。
+- 对删除、覆盖、安装、联网下载、修改系统设置等高风险操作，不要用聊天文本询问“是否确认”。直接发起对应工具调用；runtime 会弹出结构化确认按钮，并把用户确认/拒绝结果作为工具观察返回给你。
 
 【工具选择】
 1. 观察优先：不确定文件/目录状态时，先 list/search/read，不要凭空猜路径。
@@ -87,12 +87,12 @@ impl SystemPromptBuilder {
 3. **路径处理**：
    - 用户说"桌面"时，使用：{}
    - 用户说"我的文档"时，使用：{}
-   - Windows 路径使用反斜杠 \\ 或双反斜杠 \\\\
+   - 根据当前系统生成路径：macOS/Linux 使用 /，Windows 使用反斜杠 \\ 或双反斜杠 \\\\
 
 4. **命令规范**（当前系统：{}）：
    - Windows：使用 PowerShell 语法
    - macOS/Linux：使用 bash/sh 语法
-   - 下载文件示例：Invoke-WebRequest -Uri "URL" -OutFile "路径"
+   - 下载文件时根据当前系统选择 curl、wget、PowerShell Invoke-WebRequest 或系统已有工具
    - 不要混用不同平台的命令
 
 5. **错误处理**：

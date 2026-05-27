@@ -47,7 +47,9 @@ export function MessageList({ messages, isThinking, messagesEndRef }: MessageLis
                             ? "bg-emerald-500/20 text-emerald-300"
                             : result.status === "error"
                               ? "bg-rose-500/20 text-rose-300"
-                              : "bg-amber-500/20 text-amber-300"
+                              : result.status === "waiting_approval"
+                                ? "bg-amber-500/20 text-amber-300"
+                                : "bg-cyan-500/20 text-cyan-300"
                         }`}
                       >
                         {result.status}

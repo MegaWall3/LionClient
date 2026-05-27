@@ -4,6 +4,7 @@ use crate::types::{ListFilesOptions, RunCommandOptions};
 use serde_json::Value;
 use tauri::Window;
 
+use super::approval::{request_tool_approval, requires_approval};
 use super::runtime::ToolInvocation;
 
 // 直接从 files 模块导入 Options 结构体
@@ -18,11 +19,22 @@ pub struct ToolExecutor;
 
 impl ToolExecutor {
     /// 执行单个工具调用
-    pub async fn execute(_window: &Window, invocation: &ToolInvocation) -> Result<String, String> {
+    pub async fn execute(
+        window: &Window,
+        message_id: &str,
+        invocation: &ToolInvocation,
+    ) -> Result<String, String> {
         eprintln!(
             "[ToolExecutor] 执行工具: {} with args: {}",
             invocation.name, invocation.arguments
         );
+
+        if requires_approval(invocation) {
+            let approved = request_tool_approval(window, message_id, invocation).await?;
+            if !approved {
+                return Err("用户拒绝了这个工具调用".to_string());
+            }
+        }
 
         match invocation.name.as_str() {
             // 核心工具
@@ -37,7 +49,10 @@ impl ToolExecutor {
             // 网络工具
             "fetch_webpage" => Self::exec_fetch_webpage(invocation.arguments.clone()).await,
 
-            _ => Err(format!("未知工具: {}。提示：文件下载请使用 run_command 执行 PowerShell 的 Invoke-WebRequest", invocation.name)),
+            _ => Err(format!(
+                "未知工具: {}。提示：文件下载请根据当前系统使用 curl、wget 或平台原生命令",
+                invocation.name
+            )),
         }
     }
 

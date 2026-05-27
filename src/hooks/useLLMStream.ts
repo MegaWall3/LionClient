@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useMemo, useState } from "react";
 import { DEFAULT_MODEL } from "../constants";
-import type { ChatMessage } from "../types";
+import type { ApprovalRequest, ChatMessage } from "../types";
 import { formatTimestamp } from "../utils";
 import { getToolArgumentsPreview } from "../utils/toolParser";
 
@@ -49,6 +49,8 @@ type ToolDoneEvent = {
   status?: "success" | "error";
 };
 
+type ApprovalRequiredEvent = ApprovalRequest;
+
 // 初始消息
 const initialMessages: ChatMessage[] = [
   {
@@ -63,6 +65,7 @@ const initialMessages: ChatMessage[] = [
 export function useLLMStream() {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [isThinking, setIsThinking] = useState(false);
+  const [approvalRequest, setApprovalRequest] = useState<ApprovalRequest | null>(null);
   const [activeUnlisteners, setActiveUnlisteners] = useState<Map<string, UnlistenFn[]>>(new Map());
 
   function clearActiveStreams(markInterrupted = false) {
@@ -74,6 +77,7 @@ export function useLLMStream() {
     const activeIds = new Set(activeUnlisteners.keys());
     setActiveUnlisteners(new Map());
     setIsThinking(false);
+    setApprovalRequest(null);
 
     if (markInterrupted && activeIds.size > 0) {
       setMessages((prev) =>
@@ -109,6 +113,36 @@ export function useLLMStream() {
     clearActiveStreams(true);
   }
 
+  async function resolveApproval(approved: boolean) {
+    if (!approvalRequest) return;
+    const request = approvalRequest;
+    setApprovalRequest(null);
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id !== request.message_id) return msg;
+        return {
+          ...msg,
+          toolCallResults: (msg.toolCallResults || []).map((result) =>
+            result.toolCallId === request.tool_id
+              ? {
+                  ...result,
+                  status: approved ? ("pending" as const) : ("error" as const),
+                  result: approved ? result.result : "用户拒绝执行",
+                }
+              : result
+          ),
+        };
+      })
+    );
+
+    await invoke("resolve_llm_approval", {
+      decision: {
+        request_id: request.request_id,
+        approved,
+      },
+    });
+  }
+
   // 发送消息
   async function sendMessage(userInput: string) {
     if (!userInput.trim()) return;
@@ -141,6 +175,7 @@ export function useLLMStream() {
     let unlistenToolCalls: UnlistenFn | undefined;
     let unlistenToolStart: UnlistenFn | undefined;
     let unlistenToolDone: UnlistenFn | undefined;
+    let unlistenApprovalRequired: UnlistenFn | undefined;
     let unlistenDone: UnlistenFn | undefined;
     let messagesToSend: StreamMessage[];
 
@@ -256,6 +291,42 @@ export function useLLMStream() {
         }
       });
 
+      unlistenApprovalRequired = await listen<ApprovalRequiredEvent>(
+        "llm-approval-required",
+        (event) => {
+          if (event.payload.message_id !== assistantMsgId) return;
+
+          setApprovalRequest(event.payload);
+          setMessages((prev) =>
+            prev.map((msg) => {
+              if (msg.id !== assistantMsgId) return msg;
+
+              const existingResults = msg.toolCallResults || [];
+              const resultIndex = existingResults.findIndex(
+                (result) => result.toolCallId === event.payload.tool_id
+              );
+              const approvalResult = {
+                toolCallId: event.payload.tool_id,
+                toolName: event.payload.tool_name,
+                arguments: event.payload.arguments,
+                result: event.payload.summary,
+                status: "waiting_approval" as const,
+              };
+
+              return {
+                ...msg,
+                toolCallResults:
+                  resultIndex >= 0
+                    ? existingResults.map((result, index) =>
+                        index === resultIndex ? { ...result, ...approvalResult } : result
+                      )
+                    : [...existingResults, approvalResult],
+              };
+            })
+          );
+        }
+      );
+
       unlistenDone = await listen<string>("llm-stream-done", (event) => {
         if (event.payload === assistantMsgId) {
           setIsThinking(false);
@@ -263,6 +334,7 @@ export function useLLMStream() {
           if (unlistenToolCalls) unlistenToolCalls();
           if (unlistenToolStart) unlistenToolStart();
           if (unlistenToolDone) unlistenToolDone();
+          if (unlistenApprovalRequired) unlistenApprovalRequired();
           if (unlistenDone) unlistenDone();
           setActiveUnlisteners((prev) => {
             const next = new Map(prev);
@@ -278,6 +350,7 @@ export function useLLMStream() {
         unlistenToolCalls,
         unlistenToolStart,
         unlistenToolDone,
+        unlistenApprovalRequired,
         unlistenDone,
       ].filter((u): u is UnlistenFn => u !== undefined);
       setActiveUnlisteners((prev) => {
@@ -323,5 +396,7 @@ export function useLLMStream() {
     sendMessage,
     stopThinking,
     startNewChat,
+    approvalRequest,
+    resolveApproval,
   };
 }

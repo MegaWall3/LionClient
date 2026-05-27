@@ -6,7 +6,7 @@ import type { FileEntry } from "../types";
  * 管理即时文件列表工具的状态和操作
  */
 export function useFileList() {
-  const [listPath, setListPath] = useState("D:\\\\Workspace");
+  const [listPath, setListPath] = useState("");
   const [listPattern, setListPattern] = useState("");
   const [listRecursive, setListRecursive] = useState(false);
   const [listResults, setListResults] = useState<FileEntry[]>([]);
@@ -47,7 +47,7 @@ export function useFileList() {
    * 重置文件列表状态
    */
   function resetFileList() {
-    setListPath("D:\\\\Workspace");
+    setListPath("");
     setListPattern("");
     setListRecursive(false);
     setListResults([]);

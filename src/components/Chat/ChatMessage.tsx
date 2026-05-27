@@ -33,7 +33,9 @@ function ToolCallResult({
               ? "bg-emerald-300"
               : toolCall.status === "error"
                 ? "bg-rose-300"
-                : "bg-amber-300 animate-pulse"
+                : toolCall.status === "waiting_approval"
+                  ? "bg-amber-300 animate-pulse"
+                  : "bg-cyan-300 animate-pulse"
           }`}
         />
         <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-slate-300">
@@ -45,10 +47,18 @@ function ToolCallResult({
               ? "bg-emerald-500/20 text-emerald-300"
               : toolCall.status === "error"
                 ? "bg-rose-500/20 text-rose-300"
-                : "bg-amber-500/20 text-amber-300"
+                : toolCall.status === "waiting_approval"
+                  ? "bg-amber-500/20 text-amber-300"
+                  : "bg-cyan-500/20 text-cyan-300"
           }`}
         >
-          {toolCall.status === "success" ? "成功" : toolCall.status === "error" ? "错误" : "执行中"}
+          {toolCall.status === "success"
+            ? "成功"
+            : toolCall.status === "error"
+              ? "错误"
+              : toolCall.status === "waiting_approval"
+                ? "待确认"
+                : "执行中"}
         </span>
       </button>
       {isExpanded && (

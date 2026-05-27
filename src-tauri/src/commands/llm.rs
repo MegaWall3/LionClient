@@ -1,5 +1,6 @@
 // LLM 模块 - Agent 架构，使用 async-openai
 mod agent;
+mod approval;
 mod executor;
 mod prompts;
 mod runtime;
@@ -7,6 +8,7 @@ mod tools;
 
 use crate::types::ChatMessage;
 use agent::Agent;
+pub use approval::resolve_llm_approval;
 use runtime::AgentRunConfig;
 use tauri::Window;
 

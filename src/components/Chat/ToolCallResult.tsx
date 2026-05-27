@@ -9,6 +9,8 @@ function getStatusIcon(status: ToolCallResult["status"]) {
   switch (status) {
     case "pending":
       return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
+    case "waiting_approval":
+      return <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />;
     case "success":
       return <CheckCircle2 className="w-4 h-4 text-green-500" />;
     case "error":
@@ -20,6 +22,8 @@ function getStatusBadge(status: ToolCallResult["status"]) {
   switch (status) {
     case "pending":
       return { className: "bg-blue-100 text-blue-700", text: "执行中" };
+    case "waiting_approval":
+      return { className: "bg-amber-100 text-amber-700", text: "待确认" };
     case "success":
       return { className: "bg-green-100 text-green-700", text: "成功" };
     case "error":

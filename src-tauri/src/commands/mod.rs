@@ -8,6 +8,6 @@ pub use files::{
     append_to_file, copy_file, delete_file, list_files, read_file, rename_file, replace_in_file,
     search_in_files, write_file,
 };
-pub use llm::call_llm_stream;
+pub use llm::{call_llm_stream, resolve_llm_approval};
 pub use network::{download_file, fetch_webpage};
 pub use shell::run_command;
