@@ -42,7 +42,7 @@ pub struct ToolInvocation {
 impl ToolInvocation {
     pub fn from_value(value: &Value) -> Result<Self, String> {
         let id = value["id"].as_str().ok_or("tool_call 缺少 id")?.to_string();
-        let name = value["function"]["name"]
+        let raw_name = value["function"]["name"]
             .as_str()
             .ok_or("tool_call 缺少 function.name")?
             .to_string();
@@ -50,8 +50,18 @@ impl ToolInvocation {
             .as_str()
             .ok_or("tool_call 缺少 function.arguments")?
             .to_string();
-        let arguments = serde_json::from_str(&arguments_json)
+        let arguments: Value = serde_json::from_str(&arguments_json)
             .map_err(|e| format!("解析工具参数失败: {}", e))?;
+        let name = if raw_name.trim().is_empty()
+            && arguments
+                .get("command")
+                .and_then(|value| value.as_str())
+                .is_some()
+        {
+            "run_command".to_string()
+        } else {
+            raw_name
+        };
 
         Ok(Self {
             id,
