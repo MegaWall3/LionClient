@@ -1,7 +1,7 @@
-# Tauri + React + Typescript
+# LionClient
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+一个早期桌面 AI Agent 实验项目，基于 Tauri + React + TypeScript。
 
-## Recommended IDE Setup
+项目已归档为学习和纪念用途，不再以通用 Agent 产品为目标继续维护。
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+归档说明见 [归档碑文.md](./归档碑文.md)。
